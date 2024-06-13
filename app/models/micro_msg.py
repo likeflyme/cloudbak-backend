@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, LargeBinary
 
-from db.base import Base
+from db.wx_db import Base
 
 
 class Session(Base):
