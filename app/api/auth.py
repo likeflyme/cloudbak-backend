@@ -21,7 +21,7 @@ def create_token(form_data: OAuth2PasswordRequestForm = Depends(), session: Sess
     if not user or not verify_password(form_data.password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="错误的用户名或密码",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
