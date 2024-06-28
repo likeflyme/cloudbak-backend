@@ -10,13 +10,6 @@ from config.log_config import logger
 from db.sys_db import SessionLocal
 from .decode_wx_pictures import decrypt_files_in_directory
 
-SQLITE_FILE_HEADER = bytes('SQLite format 3', encoding='ASCII') + bytes(1)
-IV_SIZE = 16
-HMAC_SHA1_SIZE = 20
-KEY_SIZE = 32
-DEFAULT_PAGESIZE = 4096
-DEFAULT_ITER = 64000
-
 
 def analyze(zip_path: str, user: User, sys_session_id: int):
     """
