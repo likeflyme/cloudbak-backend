@@ -7,10 +7,12 @@ from jose import jwt, JWTError
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
-from app.models.sys import SysUser
+from app.models.sys import SysUser, SysSession
 from app.schemas.sys_schemas import UserInDB
 from config.auth_config import settings
 from db.sys_db import get_db
+from config.cache_config import cache_half_hour
+from config.log_config import logger
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
@@ -57,7 +59,14 @@ async def get_current_user(db: Session = Depends(get_db), token: str = Depends(o
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    # 尝试从缓存中获取
+    cached_user = cache_half_hour.get(token)
+    if cached_user is not None:
+        logger.debug("返回缓存中存在的用户")
+        return cached_user
+    logger.debug("缓存中不存在用户信息，数据库查询该用户")
     try:
+
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         username: str = payload.get("sub")
         if username is None:
@@ -67,8 +76,14 @@ async def get_current_user(db: Session = Depends(get_db), token: str = Depends(o
     user = db.query(SysUser).filter_by(username=username).first()
     if user is None:
         raise credentials_exception
+    cache_half_hour[token] = user
+    logger.debug("缓存用户")
     return user
 
 
-def get_current_wx_id(user: SysUser = Depends(get_current_user)):
-    return user.current_wx_id
+def get_current_sys_session(db: Session = Depends(get_db), user: SysUser = Depends(get_current_user)):
+    return db.query(SysSession).filter_by(id=user.current_session_id).first()
+
+
+def get_current_wx_id(sys_session: SysSession = Depends(get_current_sys_session)):
+    return sys_session.wx_id

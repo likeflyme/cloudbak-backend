@@ -1,4 +1,6 @@
-from sqlalchemy import Column, Integer, String
+import time
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship
 
 from db.sys_db import Base
 
@@ -11,7 +13,42 @@ class SysUser(Base):
     username = Column(String, unique=True)
     password = Column(String)
     nickname = Column(String)
-    current_wx_id = Column(String)
+    current_session_id = Column(Integer)
     state = Column(Integer)
-    create_time = Column(Integer)
-    update_time = Column(Integer)
+    create_time = Column(Integer, default=time.time())
+    update_time = Column(Integer, default=time.time())
+
+    sessions = relationship("SysSession", back_populates="owner")
+
+
+class SysSession(Base):
+    __tablename__ = "sys_session"
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String)
+    desc = Column(String)
+    wx_id = Column(String, default=None)
+    wx_name = Column(String, default=None)
+    wx_acct_name = Column(String, default=None)
+    wx_key = Column(String, default=None)
+    wx_mobile = Column(String, default=None)
+    wx_email = Column(String, default=None)
+    create_time = Column(Integer, default=time.time())
+    update_time = Column(Integer, default=time.time())
+    owner_id = Column(Integer, ForeignKey("sys_user.id"))
+
+    owner = relationship("SysUser", back_populates="sessions")
+
+
+class SysTask(Base):
+    __tablename__ = "sys_task"
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String)
+    state = Column(Integer, default=2)
+    detail = Column(String, default=None)
+    create_time = Column(Integer, default=time.time())
+    update_time = Column(Integer, default=time.time())
+    owner_id = Column(Integer, ForeignKey("sys_user.id"), default=None)

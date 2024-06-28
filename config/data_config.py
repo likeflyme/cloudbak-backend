@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     multi_msg_db: str = 'Multi/decoded_MSG0.db'
     micro_msg_db: str = 'decoded_MicroMsg.db'
     file_storage_path: str = 'FileStorage/'
+    msg_attach_path: str = 'MsgAttach/'
     head_path: str = 'images/head/'
 
     class Config:

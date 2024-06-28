@@ -1,3 +1,4 @@
+import time
 from typing import Union
 
 from pydantic import BaseModel
@@ -16,7 +17,7 @@ class User(BaseModel):
     id: int
     username: str
     nickname: Union[str, None] = None
-    current_wx_id: Union[str, None] = None
+    current_session_id: Union[str, None] = None
     state: int
     create_time: int
     update_time: int
@@ -24,3 +25,26 @@ class User(BaseModel):
 
 class UserInDB(User):
     hashed_password: str
+    
+
+class SysSessionSchema(BaseModel):
+    name: str | None = None
+    desc: str | None = None
+    wx_id: str | None = None
+    wx_name: str | None = None
+    wx_acct_name: str | None = None
+    wx_key: str | None = None
+    wx_mobile: str | None = None
+    wx_email: str | None = None
+    create_time: int = time.time()
+    update_time: int = time.time()
+    owner_id: int
+
+    class Config:
+        from_attributes = True
+
+
+class SysSessionSchemaWithId(SysSessionSchema):
+    id: int
+
+

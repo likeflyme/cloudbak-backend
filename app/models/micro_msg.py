@@ -28,3 +28,5 @@ class Session(Base):
     Reserved4 = Column(Integer)
     Reserved5 = Column(String)
     bytesXml = Column(LargeBinary)
+
+

@@ -13,6 +13,11 @@ class MsgBase(BaseModel):
     Sequence: int
     StatusEx: int
     Status: int
+    MsgServerSeq: Optional[int] = None
+    MsgSequence: Optional[int] = None
+    StrTalker: Optional[str] = None
+    StrContent: Optional[str] = None
+    DisplayContent: Optional[str] = None
 
 
 class Msg(MsgBase):
@@ -42,3 +47,16 @@ class Session(BaseModel):
     Reserved3: Optional[str] = None
     Reserved4: Optional[int] = None
     Reserved5: Optional[str] = None
+
+
+class MsgDetail(MsgBase):
+    Reserved0: Optional[int] = None
+    Reserved1: Optional[int] = None
+    Reserved2: Optional[int] = None
+    Reserved3: Optional[int] = None
+    Reserved4: Optional[int] = None
+    Reserved5: Optional[int] = None
+    Reserved6: Optional[int] = None
+    CompressContent: Optional[str] = None
+    BytesExtra: Optional[str] = None
+    BytesTrans: Optional[str] = None
