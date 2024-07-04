@@ -10,3 +10,4 @@ pydantic-settings==2.3.1
 fastapi-pagination==0.12.24
 cachetools==5.3.3
 passlib[bcrypt]
+pytest==8.2.2

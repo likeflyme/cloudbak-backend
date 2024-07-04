@@ -63,3 +63,5 @@ def wx_db_micro_msg(curren_session: SysSession = Depends(get_current_sys_session
         yield my_db
     finally:
         my_db.close()
+
+

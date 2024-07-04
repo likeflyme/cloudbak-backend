@@ -55,29 +55,33 @@ def authenticate_user(fake_db, username: str, password: str):
 
 async def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
+        status_code=status.HTTP_403_FORBIDDEN,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
     # 尝试从缓存中获取
     cached_user = cache_half_hour.get(token)
     if cached_user is not None:
-        logger.debug("返回缓存中存在的用户")
+        logger.info("返回缓存中存在的用户")
         return cached_user
-    logger.debug("缓存中不存在用户信息，数据库查询该用户")
+    logger.info("缓存中不存在用户信息，数据库查询该用户")
     try:
 
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         username: str = payload.get("sub")
+        logger.info("username is " + username)
         if username is None:
+            logger.info("jwt 凭证中用户名不存在")
             raise credentials_exception
-    except JWTError:
+    except JWTError as e:
+        logger.error('jwt error', e)
         raise credentials_exception
     user = db.query(SysUser).filter_by(username=username).first()
+    logger.info("数据库中用户不存在")
     if user is None:
         raise credentials_exception
     cache_half_hour[token] = user
-    logger.debug("缓存用户")
+    logger.info("缓存用户")
     return user
 
 

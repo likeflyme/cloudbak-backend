@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.dependencies.auth_dep import get_current_user
 from app.schemas.sys_schemas import User
 from app.services.analyze import analyze
+from app.services.save_head_images import save_header_images
 from app.services.sys_task_maker import TaskObj, task_execute
 from config.app_config import settings as app_settings
 from config.data_config import settings as data_settings
@@ -77,3 +78,9 @@ def de_decrypt(background_tasks: BackgroundTasks):
     file_location = "D:\\wxdec\\wx\\jianghu\\wxid_b125nd5rc59r12.zip"
     task_obj = TaskObj(1, "数据库解析任务", analyze, file_location, None, 3)
     background_tasks.add_task(task_execute, task_obj)
+
+
+@router.get("/save-head-images/")
+def save_head_images():
+    wx_dir = "D:\\wxdec\\wx\\jianghu\\wxid_b125nd5rc59r12"
+    save_header_images(wx_dir, 'jianghu', 'wxid_b125nd5rc59r12')

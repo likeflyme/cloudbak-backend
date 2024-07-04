@@ -4,8 +4,8 @@ from fastapi import Depends, HTTPException, APIRouter, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from app.dependencies.auth_dep import create_access_token, get_current_user, verify_password
-from app.models.sys import SysUser
+from app.dependencies.auth_dep import create_access_token, get_current_user, verify_password, get_current_sys_session
+from app.models.sys import SysUser, SysSession
 from app.schemas.sys_schemas import Token, User
 from config.auth_config import settings
 from db.sys_db import get_db
@@ -31,6 +31,11 @@ def create_token(form_data: OAuth2PasswordRequestForm = Depends(), session: Sess
     return Token(access_token=access_token, token_type="bearer")
 
 
-@router.get("/users/me/", response_model=User)
-def read_curren_user(user: User = Depends(get_current_user)):
-    return user
+@router.get("/me", response_model=User)
+def read_curren_user(user: User = Depends(get_current_user),
+                     session: SysSession = Depends(get_current_sys_session)):
+    return {
+        "id": user.id,
+        "username": user.username,
+        "current_session": session
+    }

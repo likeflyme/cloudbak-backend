@@ -5,6 +5,8 @@ class Settings(BaseSettings):
     name: str = ''
     sys_dir: str = ''
     sys_data: str = '/db/app.db'
+    head_mapping: str = ''
+    head_dir: str = ''
 
     class Config:
         env_prefix = 'APP_'

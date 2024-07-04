@@ -9,6 +9,7 @@ from config.data_config import settings as data_settings
 from config.log_config import logger
 from db.sys_db import SessionLocal
 from .decode_wx_pictures import decrypt_files_in_directory
+from .save_head_images import save_header_images
 
 
 def analyze(zip_path: str, user: User, sys_session_id: int):
@@ -47,6 +48,7 @@ def analyze(zip_path: str, user: User, sys_session_id: int):
                     decode_one(db_file, password)
         logger.info("数据库解密完成")
         # 3. 头像提取
+        save_header_images(wx_dir, sys_session.name, sys_session.wx_id)
         # 4. 图片解码
         # 图片路径
         logger.info("图片解码")

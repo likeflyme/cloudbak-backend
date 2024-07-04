@@ -4,11 +4,12 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     home: str = 'wx/'
     msg_path: str = 'Msg/'
+    head_path: str = 'SysHead/'
     multi_msg_db: str = 'Multi/decoded_MSG0.db'
     micro_msg_db: str = 'decoded_MicroMsg.db'
+    misc_db: str = 'decoded_Misc.db'
     file_storage_path: str = 'FileStorage/'
     msg_attach_path: str = 'MsgAttach/'
-    head_path: str = 'images/head/'
 
     class Config:
         env_prefix = 'DATA_'

@@ -26,6 +26,15 @@ class Msg(MsgBase):
         from_attributes = True
 
 
+class SessionBaseOut(BaseModel):
+    strUsrName: str
+    strNickName: str
+    strContent: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class Session(BaseModel):
     strUsrName: str
     nOrder: Optional[int] = None

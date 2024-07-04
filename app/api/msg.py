@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import APIRouter, Depends
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
@@ -13,17 +15,14 @@ router = APIRouter(
 )
 
 
-@router.get("/sessions", response_model=Page[schemas.Session])
-def red_sessions(page: int = 1, size: int = 50,
-                 db: Session = Depends(wx_db_micro_msg)):
+@router.get("/sessions", response_model=List[schemas.SessionBaseOut])
+def red_sessions(db: Session = Depends(wx_db_micro_msg)):
     """
     查询会话分页列表
-    :param page:
-    :param size:
     :param db:
     :return:
     """
-    return paginate(db.query(micro_msg.Session).offset((page - 1) * size).limit(size))
+    return db.query(micro_msg.Session).order_by(micro_msg.Session.nOrder.desc()).all()
 
 
 @router.get("/msgs", response_model=Page[schemas.MsgBase])
@@ -31,6 +30,14 @@ def red_msgs(strUsrName: str,
              page: int = 1,
              size: int = 20,
              db: Session = Depends(wx_db_msg0)):
+    """
+    分页查询用户分页消息
+    :param strUsrName: 微信号
+    :param page: 页码
+    :param size: 分页大小
+    :param db: 数据库
+    :return: 分页数据
+    """
     # 先根据 strUsrName 在 Name2ID 表中查询 id
     names = db.query(msg.Name2ID).all()
     talker_id = 1
