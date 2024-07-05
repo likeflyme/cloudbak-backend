@@ -20,11 +20,9 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
 # 检查目录是否已经存在
-if not os.path.exists(settings.head_dir):
-    os.makedirs(settings.head_dir)
-
-# 配置静态文件映射
-app.mount(settings.head_mapping, StaticFiles(directory=settings.head_dir), name="images")
+if os.path.exists(settings.head_dir):
+    # 配置静态文件映射
+    app.mount(settings.head_mapping, StaticFiles(directory=settings.head_dir), name="images")
 
 # 中间件
 app.middleware('http')(add_request_id)

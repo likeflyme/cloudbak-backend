@@ -26,6 +26,13 @@ class Msg(MsgBase):
         from_attributes = True
 
 
+class MsgWithSenderWxId(MsgBase):
+    WxId: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class SessionBaseOut(BaseModel):
     strUsrName: str
     strNickName: str
