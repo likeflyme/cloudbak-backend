@@ -11,3 +11,4 @@ fastapi-pagination==0.12.24
 cachetools==5.3.3
 passlib[bcrypt]
 pytest==8.2.2
+protobuf==5.27.2

@@ -1,7 +1,9 @@
 import logging
+import os.path
 import uuid
 from logging import Logger, LogRecord, getLogger
 from typing import Optional
+from config.app_config import settings
 
 
 class CustomContextFilter(logging.Filter):
@@ -47,8 +49,11 @@ def set_up():
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
+    if not os.path.exists(settings.log_dir):
+        os.makedirs(settings.log_dir)
+    log_file_name = 'app.log'
     # 创建一个文件处理器，并设置编码为 UTF-8
-    file_handler = logging.FileHandler('logs/app.log', encoding='utf-8')
+    file_handler = logging.FileHandler(os.path.join(settings.log_dir, log_file_name), encoding='utf-8')
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
     return logger

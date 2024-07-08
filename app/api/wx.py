@@ -19,11 +19,6 @@ router = APIRouter(
     prefix="/wx"
 )
 
-UPLOAD_DIRECTORY = "./uploaded_files"
-
-if not os.path.exists(UPLOAD_DIRECTORY):
-    os.makedirs(UPLOAD_DIRECTORY)
-
 
 def save_file_chunk(file_path: str, file_chunk: UploadFile):
     with open(file_path, "ab") as f:
@@ -35,7 +30,7 @@ async def upload_zip(
         background_tasks: BackgroundTasks,
         file: UploadFile = File(...),
         sys_session_id: Optional[int] = Form(...),
-        key: Optional[str] = Form(None),
+        key: str = Form(...),
         user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):

@@ -1,14 +1,18 @@
+import os.path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from config import app_config
+from config.app_config import settings
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
-sys_db_path = app_config.settings.sys_dir + app_config.settings.sys_data
-
-engine = create_engine(f"sqlite:///{sys_db_path}", connect_args={"check_same_thread": False})
+sys_db_path = os.path.join(settings.sys_dir, settings.sys_data_dir)
+if not os.path.exists(sys_db_path):
+    os.makedirs(sys_db_path)
+sys_db_file_path = os.path.join(str(sys_db_path), settings.sys_db_file_name)
+engine = create_engine(f"sqlite:///{sys_db_file_path}", connect_args={"check_same_thread": False})
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
