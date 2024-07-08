@@ -4,7 +4,7 @@ from db.wx_db import Base
 
 
 class Session(Base):
-    __tablename__ = "Session"
+    __tablename__ = 'Session'
     __table_args__ = {'extend_existing': True}
 
     strUsrName = Column(String, primary_key=True)
@@ -30,3 +30,38 @@ class Session(Base):
     bytesXml = Column(LargeBinary)
 
 
+class Contact(Base):
+    __tablename__ = 'Contact'
+    __table_args__ = {'extend_existing': True}
+
+    UserName = Column(String, primary_key=True)
+    Alias = Column(String)
+    EncryptUserName = Column(String)
+    DelFlag = Column(Integer)
+    Type = Column(Integer)
+    VerifyFlag = Column(Integer)
+    Reserved1 = Column(Integer)
+    Reserved2 = Column(Integer)
+    Reserved3 = Column(String)
+    Reserved4 = Column(String)
+    Remark = Column(String)
+    NickName = Column(String)
+    LabelIDList = Column(String)
+    DomainList = Column(String)
+    ChatRoomType = Column(Integer)
+    PYInitial = Column(String)
+    QuanPin = Column(String)
+    RemarkPYInitial = Column(String)
+    RemarkQuanPin = Column(String)
+    BigHeadImgUrl = Column(String)
+    SmallHeadImgUrl = Column(String)
+    HeadImgMd5 = Column(String)
+    ChatRoomNotify = Column(Integer)
+    Reserved5 = Column(Integer)
+    Reserved6 = Column(String)
+    Reserved7 = Column(String)
+    ExtraBuf = Column(LargeBinary)
+    Reserved8 = Column(Integer)
+    Reserved9 = Column(Integer)
+    Reserved10 = Column(String)
+    Reserved11 = Column(String)

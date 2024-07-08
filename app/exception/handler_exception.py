@@ -8,10 +8,13 @@ from config.log_config import logger
 
 async def http_exception_handler(request: Request, exc: HTTPException):
     logger.error(f"HTTP error occurred: {exc.detail}")
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"message": exc.detail},
-    )
+    if exc.status_code == 404:
+        raise exc
+    else:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"message": exc.detail},
+        )
 
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):

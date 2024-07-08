@@ -12,3 +12,4 @@ cachetools==5.3.3
 passlib[bcrypt]
 pytest==8.2.2
 protobuf==5.27.2
+lz4==4.3.3

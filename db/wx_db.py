@@ -18,6 +18,7 @@ session_local_dict = defaultdict(lambda: None)
 
 multi_msg0_db = data_config.settings.msg_path + data_config.settings.multi_msg_db
 micro_msg_db = data_config.settings.msg_path + data_config.settings.micro_msg_db
+hard_link_image_db = data_config.settings.msg_path + data_config.settings.hard_link_image_db
 
 
 def get_session_local(db_path):
@@ -56,6 +57,22 @@ def wx_db_micro_msg(curren_session: SysSession = Depends(get_current_sys_session
     :return: 数据库 session
     """
     db_path = f"{app_config.settings.sys_dir}{data_config.settings.home}{curren_session.name}/{curren_session.wx_id}/{micro_msg_db}"
+    logger.info("DB: %s", db_path)
+    SessionLocal = get_session_local(db_path)
+    my_db = SessionLocal()
+    try:
+        yield my_db
+    finally:
+        my_db.close()
+
+
+def wx_db_hard_link_image(curren_session: SysSession = Depends(get_current_sys_session)):
+    """
+    获取 micro_msg.db 数据库 session
+    :param wxid: 用户当前微信id
+    :return: 数据库 session
+    """
+    db_path = f"{app_config.settings.sys_dir}{data_config.settings.home}{curren_session.name}/{curren_session.wx_id}/{hard_link_image_db}"
     logger.info("DB: %s", db_path)
     SessionLocal = get_session_local(db_path)
     my_db = SessionLocal()

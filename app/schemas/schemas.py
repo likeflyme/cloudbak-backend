@@ -76,3 +76,47 @@ class MsgDetail(MsgBase):
     CompressContent: Optional[str] = None
     BytesExtra: Optional[str] = None
     BytesTrans: Optional[str] = None
+
+
+class ContactBase(BaseModel):
+    UserName: Optional[str] = None
+    Alias: Optional[str] = None
+    EncryptUserName: Optional[str] = None
+    Remark: Optional[str] = None
+    NickName: Optional[str] = None
+    PYInitial: Optional[str] = None
+    QuanPin: Optional[str] = None
+    RemarkPYInitial: Optional[str] = None
+
+
+class Contact(BaseModel):
+    UserName: Optional[str] = None
+    Alias: Optional[str] = None
+    EncryptUserName: Optional[str] = None
+    DelFlag: Optional[int] = None
+    Type: Optional[int] = None
+    VerifyFlag: Optional[int] = None
+    Reserved1: Optional[int] = None
+    Reserved2: Optional[int] = None
+    Reserved3: Optional[str] = None
+    Reserved4: Optional[str] = None
+    Remark: Optional[str] = None
+    NickName: Optional[str] = None
+    LabelIDList: Optional[str] = None
+    DomainList: Optional[str] = None
+    ChatRoomType: Optional[int] = None
+    PYInitial: Optional[str] = None
+    QuanPin: Optional[str] = None
+    RemarkPYInitial: Optional[str] = None
+    RemarkQuanPin: Optional[str] = None
+    BigHeadImgUrl: Optional[str] = None
+    SmallHeadImgUrl: Optional[str] = None
+    HeadImgMd5: Optional[str] = None
+    ChatRoomNotify: Optional[int] = None
+    Reserved5: Optional[int] = None
+    Reserved6: Optional[str] = None
+    Reserved7: Optional[str] = None
+    Reserved8: Optional[int] = None
+    Reserved9: Optional[int] = None
+    Reserved10: Optional[str] = None
+    Reserved11: Optional[str] = None

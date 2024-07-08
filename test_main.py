@@ -1,8 +1,6 @@
-from app.models import msg_pb2
-from app.services.save_head_images import save_header_images
+from app.models.proto import msg_pb2
 from db.wx_db import get_session_local
 from app.models.multi.msg import Msg
-import binascii
 import subprocess
 from config.log_config import logger
 
