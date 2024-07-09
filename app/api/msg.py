@@ -1,5 +1,9 @@
 import os
+import re
 from typing import List
+
+import lz4.block as lb
+import xmltodict
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
@@ -39,6 +43,14 @@ def red_sessions(db: Session = Depends(wx_db_micro_msg)):
     :return:
     """
     return db.query(micro_msg.Session).order_by(micro_msg.Session.nOrder.desc()).all()
+
+
+def clean_xml_data(xml_str):
+    # 删除非XML字符
+    xml_str = re.sub(r'[^\x09\x0A\x0D\x20-\x7E\u4e00-\u9fff\u3000-\u303F\uFF00-\uFFEF]', '', xml_str)
+    # 删除空的CDATA节点
+    xml_str = re.sub(r'<!\[CDATA\[\]\]>', '', xml_str)
+    return xml_str
 
 
 @router.get("/msgs", response_model=List[schemas.MsgWithExtra])
@@ -87,6 +99,11 @@ def red_msgs(strUsrName: str,
                 # 图片原图
                 if f3.s1 == 4:
                     nmsg.Image = dat_to_img(sys_session.name, f3.s2)
+        if n.CompressContent:
+            unzipStr = lb.decompress(n.CompressContent, uncompressed_size=0x10004)
+            xml_data = unzipStr.decode('utf-8')
+            compress_content_dict = xmltodict.parse(clean_xml_data(xml_data))
+            nmsg.compress_content = compress_content_dict
         results.append(nmsg)
     return results
 

@@ -1,7 +1,9 @@
 import os.path
+import re
 import subprocess
 
 import lz4.block as lb
+import xmltodict
 
 from app.models.proto import test_pb2, msg_bytes_extra_pb2
 from db.sys_db import SessionLocal
@@ -108,11 +110,20 @@ def deserialize_img():
     session_local = get_session_local(msg0_db_path)
     db = session_local()
     try:
-        msg = db.query(Msg).filter_by(localId=63360).first()
+        msg = db.query(Msg).filter_by(localId=53792).first()
         print(msg)
         if msg:
+            # print('-----decode protobuf-------')
+            # print(decode_protobuf(msg.BytesExtra))
+            # print(decode_protobuf(msg.CompressContent))
 
-            print(decode_protobuf(msg.BytesExtra))
+            print('-----lz4 decompress compress content-----')
+            unzipStr = lb.decompress(msg.CompressContent, uncompressed_size=0x10004)
+            text = unzipStr.decode('utf-8')
+            print(text)
+            # print(xml_data)
+            compress_content_dict = xmltodict.parse(clean_xml_data(text))
+            print(compress_content_dict)
 
             be = msg_bytes_extra_pb2.BytesExtra()
             be.ParseFromString(msg.BytesExtra)
@@ -127,5 +138,15 @@ def deserialize_img():
         db.close()
 
 
+# 清理XML数据函数
+def clean_xml_data(xml_str):
+    # 删除非XML字符
+    xml_str = re.sub(r'[^\x09\x0A\x0D\x20-\x7E\u4e00-\u9fff]', '', xml_str)
+    # 删除空的CDATA节点
+    xml_str = re.sub(r'<!\[CDATA\[\]\]>', '', xml_str)
+    return xml_str
+
+
 deserialize_img()
+
 

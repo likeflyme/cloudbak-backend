@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict
 
 from pydantic import BaseModel
 
@@ -30,6 +30,7 @@ class MsgWithExtra(MsgBase):
     WxId: Optional[str] = None
     Thumb: Optional[str] = None
     Image: Optional[str] = None
+    compress_content: Optional[Dict] = None
 
     class Config:
         from_attributes = True
