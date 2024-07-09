@@ -26,8 +26,10 @@ class Msg(MsgBase):
         from_attributes = True
 
 
-class MsgWithSenderWxId(MsgBase):
+class MsgWithExtra(MsgBase):
     WxId: Optional[str] = None
+    Thumb: Optional[str] = None
+    Image: Optional[str] = None
 
     class Config:
         from_attributes = True

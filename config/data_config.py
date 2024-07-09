@@ -1,4 +1,7 @@
+import os
+
 from pydantic_settings import BaseSettings
+from config.app_config import settings as app_settings
 
 
 class Settings(BaseSettings):
@@ -20,3 +23,7 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def home():
+    return os.path.join(app_settings.sys_dir, settings.home)

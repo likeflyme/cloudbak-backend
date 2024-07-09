@@ -3,7 +3,7 @@ import subprocess
 
 import lz4.block as lb
 
-from app.models.proto import msg_img_pb2, test_pb2
+from app.models.proto import test_pb2, msg_bytes_extra_pb2
 from db.sys_db import SessionLocal
 from db.wx_db import get_session_local
 from app.models.sys import SysUser, SysSession
@@ -49,7 +49,7 @@ def decrypt_yinyong():
         db.close()
 
 
-def decode_protobuf_img(data):
+def decode_protobuf(data):
     """
     聊天记录图片 BytesExtra protobuf 结构
     :param data:
@@ -71,27 +71,6 @@ def decode_protobuf_img(data):
             process.wait()
     return output
 
-
-
-# session_local = get_session_local(msg0_db_path)
-# db = session_local()
-# try:
-#     msg = db.query(Msg).filter_by(localId=63504).first()
-#     if msg:
-#         out = decode_protobuf_img(msg.BytesExtra)
-#         print(out)
-#         new_message = msg_img_pb2.MyMessage()
-#         new_message.ParseFromString(msg.BytesExtra)
-#
-#         print(f"Field 1: {new_message.field_1}")
-#         print(f"Field 2: {new_message.field_2}")
-#         print(f"Msg Source - Bizflag: {new_message.msg_source.bizflag}")
-#         print(f"Msg Source - UUID: {new_message.msg_source.uuid}")
-#         print(f"Msg Source - FR: {new_message.msg_source.alnode.fr}")
-#         print(f"Field 4: {new_message.field_4}")
-#         print(f"Field 5: {new_message.field_5}")
-# finally:
-#     db.close()
 
 
 def generate_proto():
@@ -120,12 +99,33 @@ def generate_proto():
     serialized_data = animal.SerializeToString()
     print(f"Serialized data: {serialized_data}")
 
-    out = decode_protobuf_img(serialized_data)
+    out = decode_protobuf(serialized_data)
 
     print(out)
 
 
-generate_proto()
+def deserialize_img():
+    session_local = get_session_local(msg0_db_path)
+    db = session_local()
+    try:
+        msg = db.query(Msg).filter_by(localId=63360).first()
+        print(msg)
+        if msg:
+
+            print(decode_protobuf(msg.BytesExtra))
+
+            be = msg_bytes_extra_pb2.BytesExtra()
+            be.ParseFromString(msg.BytesExtra)
+
+            print('print f1')
+            for f1 in be.f1:
+                print(f'{f1.s1}: {f1.s2}')
+            print('print f3')
+            for f3 in be.f3:
+                print(f'{f3.s1}: {f3.s2}')
+    finally:
+        db.close()
 
 
+deserialize_img()
 
