@@ -12,11 +12,12 @@ from sqlalchemy.orm import Session, aliased
 from app.dependencies.auth_dep import get_current_sys_session
 from app.models import micro_msg
 from app.models.hard_link_image import HardLinkImageID
-from app.models.micro_msg import Contact
+from app.models.micro_msg import Contact, ChatRoom
 from app.models.multi import msg
 from app.models.proto import msg_bytes_extra_pb2
 from app.models.sys import SysSession
 from app.schemas import schemas
+from app.schemas.micro_msg import ChatRoom as ChatRoomSchema
 from app.services.file_handler import dat_to_img
 from config.app_config import settings as app_settings
 from config.data_config import settings as data_settings
@@ -86,7 +87,6 @@ def red_msgs(strUsrName: str,
     for n in msgs:
         nmsg = schemas.MsgWithExtra(**n.__dict__)
         if n.BytesExtra:
-            logger.info('BytesExtra 反序列化处理')
             proto = msg_bytes_extra_pb2.BytesExtra()
             proto.ParseFromString(n.BytesExtra)
             for f3 in proto.f3:
@@ -110,7 +110,18 @@ def red_msgs(strUsrName: str,
 
 @router.get("/contact", response_model=List[schemas.ContactBase])
 def red_contact(db: Session = Depends(wx_db_micro_msg)):
-    return db.query(Contact).all()
+    return db.query(Contact).filter(Contact.NickName != "").all()
+
+
+@router.get("/contact-split", response_model=List[schemas.ContactBase])
+def red_contact(page: int = 1,
+                size: int = 20,
+                ChatRoomType: int = 0,
+                db: Session = Depends(wx_db_micro_msg)):
+    return (db.query(Contact)
+            .filter(Contact.NickName != "", Contact.Type != 0, Contact.ChatRoomType == ChatRoomType)
+            .order_by(Contact.NickName.asc())
+            .offset((page - 1) * size).limit(size))
 
 
 @router.get("/image")
@@ -120,3 +131,9 @@ async def get_image(img_path: str, session_name: str):
     if os.path.exists(file_path):
         return FileResponse(str(file_path))
     raise HTTPException(status_code=404, detail="File not found")
+
+
+@router.get("/chatroom-info", response_model=ChatRoomSchema)
+async def get_image(chat_room_name: str, db: Session = Depends(wx_db_micro_msg)):
+    return db.query(ChatRoom).filter_by(ChatRoomName=chat_room_name).first()
+

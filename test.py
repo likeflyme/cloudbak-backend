@@ -5,6 +5,7 @@ import subprocess
 import lz4.block as lb
 import xmltodict
 
+from app.models.micro_msg import Contact
 from app.models.proto import test_pb2, msg_bytes_extra_pb2
 from db.sys_db import SessionLocal
 from db.wx_db import get_session_local
@@ -147,6 +148,19 @@ def clean_xml_data(xml_str):
     return xml_str
 
 
-deserialize_img()
+def decrypt_contact_ExtraBuf():
+    db_path = os.path.join(app_settings.sys_dir, 'wx\\jianghu\\wxid_b125nd5rc59r12\\Msg\\decoded_MicroMsg.db')
+    session_local = get_session_local(db_path)
+    db = session_local()
+    try:
+        contact = db.query(Contact).filter_by(UserName='guxuefei0719').first()
+        print(contact.NickName)
+        if contact:
+            unzipStr = lb.decompress(contact.ExtraBuf, uncompressed_size=0x10004)
+            text = unzipStr.decode('utf-8')
+            print(text)
+    finally:
+        db.close()
 
 
+decrypt_contact_ExtraBuf()

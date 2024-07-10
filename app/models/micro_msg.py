@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, LargeBinary
+from sqlalchemy import Column, Integer, String, LargeBinary, BLOB
 
 from db.wx_db import Base
 
@@ -64,4 +64,26 @@ class Contact(Base):
     Reserved8 = Column(Integer)
     Reserved9 = Column(Integer)
     Reserved10 = Column(String)
-    Reserved11 = Column(String)
+
+
+class ChatRoom(Base):
+    __tablename__ = 'ChatRoom'
+    __table_args__ = {'extend_existing': True}
+
+    ChatRoomName = Column(String, primary_key=True)
+    UserNameList = Column(String)
+    DisplayNameList = Column(String)
+    ChatRoomFlag = Column(Integer)
+    Owner = Column(Integer)
+    IsShowName = Column(Integer)
+    SelfDisplayName = Column(String)
+    Reserved1 = Column(Integer)
+    Reserved2 = Column(String)
+    Reserved3 = Column(Integer)
+    Reserved4 = Column(String)
+    Reserved5 = Column(Integer)
+    Reserved6 = Column(String)
+    RoomData = Column(LargeBinary)
+    Reserved7 = Column(Integer)
+    Reserved8 = Column(String)
+
