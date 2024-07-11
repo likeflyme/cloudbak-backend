@@ -23,6 +23,8 @@ from config.app_config import settings as app_settings
 from config.data_config import settings as data_settings
 from config.log_config import logger
 from db.wx_db import wx_db_micro_msg, wx_db_msg0
+from app.services import parse_msg
+
 
 router = APIRouter(
     prefix="/msg"
@@ -46,12 +48,14 @@ def red_sessions(db: Session = Depends(wx_db_micro_msg)):
     return db.query(micro_msg.Session).order_by(micro_msg.Session.nOrder.desc()).all()
 
 
-def clean_xml_data(xml_str):
-    # 删除非XML字符
-    xml_str = re.sub(r'[^\x09\x0A\x0D\x20-\x7E\u4e00-\u9fff\u3000-\u303F\uFF00-\uFFEF]', '', xml_str)
-    # 删除空的CDATA节点
-    xml_str = re.sub(r'<!\[CDATA\[\]\]>', '', xml_str)
-    return xml_str
+@router.get("/msg_by_svr_id", response_model=schemas.MsgWithExtra)
+def red_msg_by_svr_id(svr_id: int,
+                      db: Session = Depends(wx_db_msg0),
+                      sys_session: SysSession = Depends(get_current_sys_session)):
+    result = db.query(msg.Msg).filter_by(MsgSvrID=svr_id).first()
+    if result:
+        return parse_msg.parse(result, sys_session.name)
+    return None
 
 
 @router.get("/msgs", response_model=List[schemas.MsgWithExtra])
@@ -85,25 +89,7 @@ def red_msgs(strUsrName: str,
     results = []
     # 反序列化 ByteExtra 字段
     for n in msgs:
-        nmsg = schemas.MsgWithExtra(**n.__dict__)
-        if n.BytesExtra:
-            proto = msg_bytes_extra_pb2.BytesExtra()
-            proto.ParseFromString(n.BytesExtra)
-            for f3 in proto.f3:
-                # 群聊消息发送者wxid
-                if f3.s1 == 1:
-                    nmsg.WxId = f3.s2
-                # 图片缩略图
-                if f3.s1 == 3:
-                    nmsg.Thumb = dat_to_img(sys_session.name, f3.s2)
-                # 图片原图
-                if f3.s1 == 4:
-                    nmsg.Image = dat_to_img(sys_session.name, f3.s2)
-        if n.CompressContent:
-            unzipStr = lb.decompress(n.CompressContent, uncompressed_size=0x10004)
-            xml_data = unzipStr.decode('utf-8')
-            compress_content_dict = xmltodict.parse(clean_xml_data(xml_data))
-            nmsg.compress_content = compress_content_dict
+        nmsg = parse_msg.parse(n, sys_session.name)
         results.append(nmsg)
     return results
 

@@ -40,6 +40,7 @@ class SessionBaseOut(BaseModel):
     strUsrName: str
     strNickName: str
     strContent: Optional[str] = None
+    nTime: Optional[int] = None
 
     class Config:
         from_attributes = True
