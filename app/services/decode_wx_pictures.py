@@ -9,6 +9,9 @@
 # print(bytes.fromhex('EEEE'))
 # 图片格式的前两个字节固定特征码
 import os
+
+from app.helper.directory_helper import get_wx_dir
+from app.models.sys import SysSession
 from config.log_config import logger
 
 tp = {
@@ -16,6 +19,13 @@ tp = {
     "gif": 0x4749,
     "png": 0x8950,
 }
+
+
+def decrypt_images(sys_session: SysSession):
+    wx_dir = get_wx_dir(sys_session)
+    msg_attach_dir = os.path.join(wx_dir, 'FileStorage/MsgAttach/')
+    logger.info('图片文件根路径: %s', msg_attach_dir)
+    decrypt_files_in_directory(msg_attach_dir)
 
 
 def decrypt_files_in_directory(directory):

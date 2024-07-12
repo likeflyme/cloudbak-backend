@@ -1,37 +1,27 @@
 import os
-import re
 from typing import List
-
-import lz4.block as lb
-import xmltodict
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import Session
 
 from app.dependencies.auth_dep import get_current_sys_session
 from app.models import micro_msg
-from app.models.hard_link_image import HardLinkImageID
 from app.models.micro_msg import Contact, ChatRoom
 from app.models.multi import msg
-from app.models.proto import msg_bytes_extra_pb2
 from app.models.sys import SysSession
 from app.schemas import schemas
 from app.schemas.micro_msg import ChatRoom as ChatRoomSchema
-from app.services.file_handler import dat_to_img
+from app.services import parse_msg
 from config.app_config import settings as app_settings
 from config.data_config import settings as data_settings
 from config.log_config import logger
 from db.wx_db import wx_db_micro_msg, wx_db_msg0
-from app.services import parse_msg
-
 
 router = APIRouter(
     prefix="/msg"
 )
 
-HardLinkImageID = aliased(HardLinkImageID, name='dir1')
-HardLinkImageID2 = aliased(HardLinkImageID, name='dir2')
 
 @router.get("/session", response_model=schemas.SessionBaseOut)
 def red_session(strUsrName: str, db: Session = Depends(wx_db_micro_msg)):

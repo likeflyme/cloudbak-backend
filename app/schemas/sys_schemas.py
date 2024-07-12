@@ -63,3 +63,12 @@ class SysSessionSchemaWithId(SysSessionSchema):
     id: int
 
 
+class CreateSysSessionSchema(BaseModel):
+    name: str
+    wx_key: str
+    wx_id: str
+    wx_name: str
+    wx_acct_name: str
+    wx_mobile: str | None = None
+
+

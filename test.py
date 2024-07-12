@@ -163,4 +163,4 @@ def decrypt_contact_ExtraBuf():
         db.close()
 
 
-decrypt_contact_ExtraBuf()
+create_user()

@@ -8,7 +8,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
-sys_db_path = os.path.join(settings.sys_dir, settings.sys_data_dir)
+sys_db_path = os.path.join(settings.sys_dir, settings.sys_db_dir)
 if not os.path.exists(sys_db_path):
     os.makedirs(sys_db_path)
 sys_db_file_path = os.path.join(str(sys_db_path), settings.sys_db_file_name)
