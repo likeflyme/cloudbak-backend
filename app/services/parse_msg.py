@@ -16,7 +16,7 @@ def clean_xml_data(xml_str):
     return xml_str
 
 
-def parse(msg: Msg, session_name: str):
+def parse(msg: Msg, session_id: int):
     nmsg = MsgWithExtra(**msg.__dict__)
     if msg.BytesExtra:
         proto = msg_bytes_extra_pb2.BytesExtra()
@@ -27,10 +27,10 @@ def parse(msg: Msg, session_name: str):
                 nmsg.WxId = f3.s2
             # 图片缩略图
             if f3.s1 == 3:
-                nmsg.Thumb = dat_to_img(session_name, f3.s2)
+                nmsg.Thumb = dat_to_img(session_id, f3.s2)
             # 图片原图
             if f3.s1 == 4:
-                nmsg.Image = dat_to_img(session_name, f3.s2)
+                nmsg.Image = dat_to_img(session_id, f3.s2)
     if msg.CompressContent:
         unzipStr = lb.decompress(msg.CompressContent, uncompressed_size=0x10004)
         xml_data = unzipStr.decode('utf-8')

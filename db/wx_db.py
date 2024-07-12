@@ -1,3 +1,4 @@
+import os
 from collections import defaultdict
 
 from fastapi import Depends
@@ -5,11 +6,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.dependencies.auth_dep import get_current_wx_id, get_current_sys_session
+from app.helper.directory_helper import get_wx_dir
 from app.models.sys import SysSession
 from config import app_config
 from config import data_config
 from sqlalchemy.ext.declarative import declarative_base
 from config.log_config import logger
+from config.wx_config import settings as wx_settings
 
 Base = declarative_base()
 
@@ -41,7 +44,7 @@ def wx_db_msg0(curren_session: SysSession = Depends(get_current_sys_session)):
     :param wxid: 用户当前微信id
     :return: 数据库 session
     """
-    db_path = f"{app_config.settings.sys_dir}{data_config.settings.home}{curren_session.name}/{curren_session.wx_id}/{multi_msg0_db}"
+    db_path = os.path.join(get_wx_dir(curren_session), wx_settings.db_multi_msg)
     SessionLocal = get_session_local(db_path)
     my_db = SessionLocal()
     try:
@@ -56,7 +59,7 @@ def wx_db_micro_msg(curren_session: SysSession = Depends(get_current_sys_session
     :param wxid: 用户当前微信id
     :return: 数据库 session
     """
-    db_path = f"{app_config.settings.sys_dir}{data_config.settings.home}{curren_session.name}/{curren_session.wx_id}/{micro_msg_db}"
+    db_path = os.path.join(get_wx_dir(curren_session), wx_settings.db_micro_msg)
     logger.info("DB: %s", db_path)
     SessionLocal = get_session_local(db_path)
     my_db = SessionLocal()
@@ -72,7 +75,7 @@ def wx_db_hard_link_image(curren_session: SysSession = Depends(get_current_sys_s
     :param wxid: 用户当前微信id
     :return: 数据库 session
     """
-    db_path = f"{app_config.settings.sys_dir}{data_config.settings.home}{curren_session.name}/{curren_session.wx_id}/{hard_link_image_db}"
+    db_path = os.path.join(get_wx_dir(curren_session), wx_settings.db_hard_link_image)
     logger.info("DB: %s", db_path)
     SessionLocal = get_session_local(db_path)
     my_db = SessionLocal()

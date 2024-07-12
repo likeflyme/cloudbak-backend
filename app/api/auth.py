@@ -37,5 +37,6 @@ def read_curren_user(user: User = Depends(get_current_user),
     return {
         "id": user.id,
         "username": user.username,
+        "current_session_id": user.current_session_id,
         "current_session": session
     }

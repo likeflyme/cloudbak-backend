@@ -14,6 +14,7 @@ class Token(BaseModel):
 
 
 class UserSession(BaseModel):
+    id: int
     name: str | None = None
     desc: str | None = None
     wx_id: str | None = None
@@ -31,7 +32,7 @@ class User(BaseModel):
     id: int
     username: str
     nickname: Union[str, None] = None
-    current_session_id: Union[str, None] = None
+    current_session_id: Union[int, None] = None
     state: Union[int, None] = None
     create_time: Union[int, None] = None
     update_time: Union[int, None] = None
@@ -40,9 +41,23 @@ class User(BaseModel):
 
 class UserInDB(User):
     hashed_password: str
-    
+
+
+class SysSessionIn(BaseModel):
+    name: str | None = None
+    desc: str | None = None
+    wx_id: str | None = None
+    wx_name: str | None = None
+    wx_acct_name: str | None = None
+    wx_key: str | None = None
+    wx_mobile: str | None = None
+
+    class Config:
+        from_attributes = True
+
 
 class SysSessionSchema(BaseModel):
+    id: int
     name: str | None = None
     desc: str | None = None
     wx_id: str | None = None
@@ -51,9 +66,26 @@ class SysSessionSchema(BaseModel):
     wx_key: str | None = None
     wx_mobile: str | None = None
     wx_email: str | None = None
-    create_time: int = time.time()
-    update_time: int = time.time()
+    create_time: int | None = None
+    update_time: int | None = None
     owner_id: int
+
+    class Config:
+        from_attributes = True
+
+
+class SysSessionOut(BaseModel):
+    id: int
+    name: str | None = None
+    desc: str | None = None
+    wx_id: str | None = None
+    wx_name: str | None = None
+    wx_acct_name: str | None = None
+    wx_key: str | None = None
+    wx_mobile: str | None = None
+    wx_email: str | None = None
+    owner_id: int
+    analyze_state: int
 
     class Config:
         from_attributes = True

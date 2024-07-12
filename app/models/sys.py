@@ -4,6 +4,10 @@ from sqlalchemy.orm import relationship
 
 from db.sys_db import Base
 
+session_analyze_end = 0
+session_analyze_running = 1
+session_analyze_pending = 2
+
 
 class SysUser(Base):
     __tablename__ = "sys_user"
@@ -13,7 +17,7 @@ class SysUser(Base):
     username = Column(String, unique=True)
     password = Column(String)
     nickname = Column(String)
-    current_session_id = Column(Integer)
+    current_session_id = Column(Integer, default=None)
     state = Column(Integer)
     create_time = Column(Integer, default=time.time())
     update_time = Column(Integer, default=time.time())
@@ -34,9 +38,10 @@ class SysSession(Base):
     wx_key = Column(String, default=None)
     wx_mobile = Column(String, default=None)
     wx_email = Column(String, default=None)
-    create_time = Column(Integer, default=time.time())
-    update_time = Column(Integer, default=time.time())
+    create_time = Column(Integer, default=lambda: int(time.time()))
+    update_time = Column(Integer, default=lambda: int(time.time()))
     owner_id = Column(Integer, ForeignKey("sys_user.id"))
+    analyze_state = Column(Integer, default=session_analyze_pending)
 
     owner = relationship("SysUser", back_populates="sessions")
 

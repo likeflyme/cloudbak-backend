@@ -58,7 +58,7 @@ def match_bytes(a1, a2):
 
 
 def decrypt_file(encrypted_file_path):
-    logger.debug('decrypt file: %s', encrypted_file_path)
+    logger.info('decrypt file: %s', encrypted_file_path)
     # 读取文件的前两个字节
     with open(encrypted_file_path, "rb") as f:
         first_byte = f.read(1)

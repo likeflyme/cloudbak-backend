@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth_dep import get_current_sys_session
+from app.helper.directory_helper import get_session_dir
 from app.models import micro_msg
 from app.models.micro_msg import Contact, ChatRoom
 from app.models.multi import msg
@@ -79,7 +80,7 @@ def red_msgs(strUsrName: str,
     results = []
     # 反序列化 ByteExtra 字段
     for n in msgs:
-        nmsg = parse_msg.parse(n, sys_session.name)
+        nmsg = parse_msg.parse(n, sys_session.id)
         results.append(nmsg)
     return results
 
@@ -101,8 +102,8 @@ def red_contact(page: int = 1,
 
 
 @router.get("/image")
-async def get_image(img_path: str, session_name: str):
-    file_path = os.path.join(app_settings.sys_dir, data_settings.home, session_name, img_path)
+async def get_image(img_path: str, session_id: int):
+    file_path = os.path.join(get_session_dir(session_id), img_path)
     logger.info(file_path)
     if os.path.exists(file_path):
         return FileResponse(str(file_path))

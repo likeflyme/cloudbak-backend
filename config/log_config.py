@@ -49,11 +49,12 @@ def set_up():
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
-    if not os.path.exists(settings.log_dir):
-        os.makedirs(settings.log_dir)
-    log_file_name = 'app.log'
+    log_dir = os.path.join(settings.sys_dir, settings.log_dir)
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    log_file_name = settings.log_file_name
     # 创建一个文件处理器，并设置编码为 UTF-8
-    file_handler = logging.FileHandler(os.path.join(settings.log_dir, log_file_name), encoding='utf-8')
+    file_handler = logging.FileHandler(str(os.path.join(str(log_dir), log_file_name)), encoding='utf-8')
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
     return logger
