@@ -19,10 +19,6 @@ Base = declarative_base()
 # 保存 session local
 session_local_dict = defaultdict(lambda: None)
 
-multi_msg0_db = data_config.settings.msg_path + data_config.settings.multi_msg_db
-micro_msg_db = data_config.settings.msg_path + data_config.settings.micro_msg_db
-hard_link_image_db = data_config.settings.msg_path + data_config.settings.hard_link_image_db
-
 
 def get_session_local(db_path):
     """
@@ -36,6 +32,13 @@ def get_session_local(db_path):
         )
         session_local_dict[db_path] = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     return session_local_dict[db_path]
+
+
+def wx_db_msg(c: int, sys_session: SysSession):
+    db_path = os.path.join(get_wx_dir(sys_session), wx_settings.db_multi_msg + str(c) + '.db')
+    if not os.path.exists(db_path):
+        return None
+    return get_session_local(db_path)
 
 
 def wx_db_msg0(curren_session: SysSession = Depends(get_current_sys_session)):

@@ -1,23 +1,27 @@
 import os
+from collections import defaultdict
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth_dep import get_current_sys_session
-from app.helper.directory_helper import get_session_dir
+from app.helper.directory_helper import get_session_dir, get_wx_dir
 from app.models import micro_msg
 from app.models.micro_msg import Contact, ChatRoom
 from app.models.multi import msg
+from app.models.multi.msg import Name2ID
 from app.models.sys import SysSession
 from app.schemas import schemas
 from app.schemas.micro_msg import ChatRoom as ChatRoomSchema
 from app.services import parse_msg
-from config.app_config import settings as app_settings
-from config.data_config import settings as data_settings
 from config.log_config import logger
-from db.wx_db import wx_db_micro_msg, wx_db_msg0
+from db.wx_db import wx_db_micro_msg, wx_db_msg0, get_session_local, wx_db_msg
+from config.wx_config import settings as wx_settings
+
+
+session_local_dict = defaultdict(lambda: None)
 
 router = APIRouter(
     prefix="/msg"
@@ -53,35 +57,49 @@ def red_msg_by_svr_id(svr_id: int,
 def red_msgs(strUsrName: str,
              page: int = 1,
              size: int = 20,
-             db: Session = Depends(wx_db_msg0),
              sys_session: SysSession = Depends(get_current_sys_session)):
     """
     分页查询用户分页消息
     :param strUsrName: 微信号
     :param page: 页码
     :param size: 分页大小
-    :param db: 数据库
+    :param sys_session: 用户 session
     :return: 分页数据
     """
     logger.info(f'strUsrName: {strUsrName}')
-    # 先根据 strUsrName 在 Name2ID 表中查询 id
-    names = db.query(msg.Name2ID).all()
-    talker_id = 1
-    for name in names:
-        if name.UsrName == strUsrName:
-            break
-        talker_id = talker_id + 1
-    logger.info(f'TalkerId: {talker_id}')
-    # 再根据id查询消息列表
-    msgs = (db.query(msg.Msg)
-            .filter_by(TalkerId=talker_id)
-            .order_by(msg.Msg.localId.desc())
-            .offset((page - 1) * size).limit(size))
-    results = []
-    # 反序列化 ByteExtra 字段
-    for n in msgs:
-        nmsg = parse_msg.parse(n, sys_session.id)
-        results.append(nmsg)
+    sl = session_local_dict[strUsrName]
+    if sl is None:
+        for c in range(0, wx_settings.max_msg):
+            session_local = wx_db_msg(c, sys_session)
+            if not session_local:
+                continue
+            db = session_local()
+            try:
+                name = db.query(Name2ID).filter_by(UsrName=strUsrName).first()
+                if name:
+                    session_local_dict[strUsrName] = session_local
+                    sl = session_local
+            finally:
+                db.close()
+    if not sl:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="用户错误，找不到数据源",
+        )
+    db = sl()
+    try:
+        # 再根据id查询消息列表
+        msgs = (db.query(msg.Msg)
+                .filter_by(StrTalker=strUsrName)
+                .order_by(msg.Msg.localId.desc())
+                .offset((page - 1) * size).limit(size))
+        results = []
+        # 反序列化 ByteExtra 字段
+        for n in msgs:
+            nmsg = parse_msg.parse(n, sys_session.id)
+            results.append(nmsg)
+    finally:
+        db.close()
     return results
 
 

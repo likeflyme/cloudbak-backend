@@ -60,11 +60,11 @@ async def get_current_user(db: Session = Depends(get_db), token: str = Depends(o
         headers={"WWW-Authenticate": "Bearer"},
     )
     # 尝试从缓存中获取
-    cached_user = cache_half_hour.get(token)
-    if cached_user is not None:
-        logger.info("返回缓存中存在的用户")
-        return cached_user
-    logger.info("缓存中不存在用户信息，数据库查询该用户")
+    # cached_user = cache_half_hour.get(token)
+    # if cached_user is not None:
+    #     logger.info("返回缓存中存在的用户")
+    #     return cached_user
+    # logger.info("缓存中不存在用户信息，数据库查询该用户")
     try:
 
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
@@ -77,8 +77,8 @@ async def get_current_user(db: Session = Depends(get_db), token: str = Depends(o
         logger.error('jwt error', e)
         raise credentials_exception
     user = db.query(SysUser).filter_by(username=username).first()
-    logger.info("数据库中用户不存在")
     if user is None:
+        logger.info("数据库中用户不存在")
         raise credentials_exception
     cache_half_hour[token] = user
     logger.info("缓存用户")

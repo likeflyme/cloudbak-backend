@@ -34,7 +34,7 @@ def analyze(sys_session_id: int):
     session_dir = get_session_dir(sys_session_id)
     wx_dir = get_wx_dir(sys_session)
     zip_file = wx_dir + '.zip'
-    unzip(zip_file, session_dir)
+    # unzip(zip_file, session_dir)
     # 2. decode 数据库
     logger.info("数据库文件解密")
     decode_msg(sys_session)
