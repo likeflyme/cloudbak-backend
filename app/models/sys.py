@@ -38,6 +38,7 @@ class SysSession(Base):
     wx_key = Column(String, default=None)
     wx_mobile = Column(String, default=None)
     wx_email = Column(String, default=None)
+    wx_dir = Column(String, default=None)
     create_time = Column(Integer, default=lambda: int(time.time()))
     update_time = Column(Integer, default=lambda: int(time.time()))
     owner_id = Column(Integer, ForeignKey("sys_user.id"))

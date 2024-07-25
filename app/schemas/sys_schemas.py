@@ -51,6 +51,7 @@ class SysSessionIn(BaseModel):
     wx_acct_name: str | None = None
     wx_key: str | None = None
     wx_mobile: str | None = None
+    wx_dir: str | None = None
 
     class Config:
         from_attributes = True
@@ -66,6 +67,7 @@ class SysSessionSchema(BaseModel):
     wx_key: str | None = None
     wx_mobile: str | None = None
     wx_email: str | None = None
+    wx_dir: str | None = None
     create_time: int | None = None
     update_time: int | None = None
     owner_id: int
@@ -84,6 +86,7 @@ class SysSessionOut(BaseModel):
     wx_key: str | None = None
     wx_mobile: str | None = None
     wx_email: str | None = None
+    wx_dir: str | None = None
     owner_id: int
     analyze_state: int
 
