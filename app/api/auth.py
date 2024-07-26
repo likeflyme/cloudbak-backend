@@ -25,11 +25,8 @@ def create_token(form_data: OAuth2PasswordRequestForm = Depends(), session: Sess
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
-    # access_token = create_access_token(
-    #     data={"sub": user.username}, expires_delta=access_token_expires
-    # )
     access_token = create_access_token(
-        data={"sub": user.username}
+        data={"sub": user.username}, expires_delta=access_token_expires
     )
     return Token(access_token=access_token, token_type="bearer")
 

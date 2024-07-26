@@ -30,27 +30,22 @@ def analyze(sys_session_id: int):
         sys_session = db.query(SysSession).filter_by(id=sys_session_id).first()
     finally:
         db.close()
-    # 1. 解压缩包
-    session_dir = get_session_dir(sys_session_id)
-    wx_dir = get_wx_dir(sys_session)
-    zip_file = wx_dir + '.zip'
-    # unzip(zip_file, session_dir)
-    # 2. decode 数据库
+    # 1. decode 数据库
     logger.info("数据库文件解密")
     decode_msg(sys_session)
     logger.info("数据库解密完成")
 
-    # 3. 头像提取
+    # 2. 头像提取
     logger.info("头像提取")
     save_header_images(sys_session)
     logger.info("头像提取完成")
 
-    # 4. 图片解码
+    # 3. 图片解码
     # 图片路径
     logger.info("图片解码")
     decrypt_images(sys_session)
     logger.info("图片解码完成")
 
-    # 5. 语音文件解码
+    # 4. 语音文件解码
 
 

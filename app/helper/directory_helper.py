@@ -17,6 +17,10 @@ def get_wx_dir(sys_session: SysSession) -> str:
     return os.path.join(get_session_dir(sys_session.id), sys_session.wx_id)
 
 
+def get_wx_dir_directly(session_id: int, wx_dir: str) -> str:
+    return os.path.join(get_session_dir(str(session_id)), wx_dir)
+
+
 def get_head_base_dir() -> str:
     return str(os.path.join(app_setting.sys_dir, app_setting.head_dir))
 

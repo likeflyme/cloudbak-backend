@@ -1,12 +1,13 @@
 import os
 import shutil
+from pathlib import Path
 from typing import Optional, List
 
 from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth_dep import get_current_user
-from app.helper.directory_helper import get_session_dir
+from app.helper.directory_helper import get_session_dir, get_wx_dir, get_wx_dir_directly
 from app.models.sys import SysSession
 from app.schemas.sys_schemas import User, CreateSysSessionSchema, SysSessionSchema
 from app.services.analyze import analyze
@@ -23,6 +24,25 @@ router = APIRouter(
 def save_file_chunk(file_path: str, file_chunk: UploadFile):
     with open(file_path, "ab") as f:
         shutil.copyfileobj(file_chunk.file, f)
+
+
+@router.post("/upload-single/")
+async def upload_zip(
+        file: UploadFile = File(...),
+        file_path: Optional[str] = Form(...),
+        sys_session_id: Optional[int] = Form(...),
+        wx_id: Optional[str] = Form(...)):
+    logger.info("文件路径：" + file_path)
+    wx_dir = get_wx_dir_directly(sys_session_id, wx_id)
+    save_path = os.path.join(wx_dir, file_path)
+
+    # 创建目录（如果不存在）
+    directory = Path(save_path).parent
+    directory.mkdir(parents=True, exist_ok=True)
+
+    logger.info("保存路径：" + save_path)
+    with open(save_path, "ab") as f:
+        shutil.copyfileobj(file.file, f)
 
 
 @router.post("/upload-zip/")
@@ -54,9 +74,12 @@ async def upload_zip(
         return {"detail": "Upload incomplete."}
 
 
-@router.get("/do-decrypt/{sys_session_id}")
-def de_decrypt(sys_session_id: int, background_tasks: BackgroundTasks):
-    task_obj = TaskObj(1, "数据库解析任务", analyze, sys_session_id)
+@router.post("/do-decrypt/{sys_session_id}")
+def de_decrypt(sys_session_id: int,
+               background_tasks: BackgroundTasks,
+               sys_user: User = Depends(get_current_user)):
+    logger.info("解析任务")
+    task_obj = TaskObj(1, "数据解析任务", analyze, sys_session_id)
     background_tasks.add_task(task_execute, task_obj)
 
 
