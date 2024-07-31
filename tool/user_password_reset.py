@@ -1,7 +1,6 @@
 import sys
 import os
 
-# 将项目根目录添加到 sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db.sys_db import SessionLocal
@@ -9,20 +8,22 @@ from app.dependencies.auth_dep import pwd_context
 from app.models.sys import SysUser
 
 
-def create():
+def update():
     username = input("请输入用户名: ")
     print(f"您输入的用户名: {username}")
-
-    password = input_pass()
 
     session = SessionLocal()
 
     try:
+        user = session.query(SysUser).filter_by(username=username).first()
+        if user is None:
+            print(f"用户 {username} 不存在")
+            return
+        password = input_pass()
         password = pwd_context.hash(password)
-        user = SysUser(username=username, password=password, nickname=username, state=1)
-        session.add(user)
+        user.password = password
         session.commit()
-        print("用户添加成功")
+        print("用户密码修改成功")
     finally:
         session.close()
 
@@ -39,7 +40,7 @@ def input_pass():
 
 
 try:
-    create()
+    update()
 except KeyboardInterrupt as e:
     print('用户中断操作')
 except Exception as e:
