@@ -1,7 +1,9 @@
+import os
 import re
 import lz4.block as lb
 import xmltodict
 
+from app.helper.directory_helper import get_session_dir
 from app.models.multi.msg import Msg
 from app.models.proto import msg_bytes_extra_pb2
 from app.schemas.schemas import MsgWithExtra
@@ -27,10 +29,14 @@ def parse(msg: Msg, session_id: int):
                 nmsg.WxId = f3.s2
             # 图片缩略图
             if f3.s1 == 3:
-                nmsg.Thumb = dat_to_img(session_id, f3.s2)
+                # nmsg.Thumb = dat_to_img(session_id, f3.s2)
+                nmsg.Thumb = f3.s2
             # 图片原图
             if f3.s1 == 4:
-                nmsg.Image = dat_to_img(session_id, f3.s2)
+                # nmsg.Image = dat_to_img(session_id, f3.s2)
+                file_path = os.path.join(get_session_dir(session_id), f3.s2)
+                if os.path.exists(file_path):
+                    nmsg.Image = f3.s2
     if msg.CompressContent:
         unzipStr = lb.decompress(msg.CompressContent, uncompressed_size=0x10004)
         xml_data = unzipStr.decode('utf-8')

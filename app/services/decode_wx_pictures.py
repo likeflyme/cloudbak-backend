@@ -93,5 +93,36 @@ def decrypt_file(encrypted_file_path):
     return decrypted_file_path
 
 
+def decrypt_by_file_type(encrypted_file_path: str, image_type: str):
+    logger.info('decrypt file: %s', encrypted_file_path)
+
+    tp_bt = tp[image_type]
+    if not tp_bt:
+        return None
+
+    with open(encrypted_file_path, "rb") as f:
+        first_byte = f.read(1)
+        second_byte = f.read(1)
+
+        if len(first_byte) < 1 or len(second_byte) < 1:
+            logger.warn("File is too small to contain two bytes for matching.")
+            return None
+
+        a1 = first_byte[0]
+
+    # 使用前两个字节进行匹配
+    key = a1 ^ (tp_bt >> 8)
+
+    # 生成解密后的文件路径
+    decrypted_file_path = os.path.splitext(encrypted_file_path)[0] + "." + image_type
+
+    # 使用 key 对整个文件进行异或运算并写入新的文件
+    with open(encrypted_file_path, "rb") as encrypted_file:
+        with open(decrypted_file_path, "wb") as decrypted_file:
+            while byte := encrypted_file.read(1):
+                decrypted_file.write(bytes([byte[0] ^ key]))
+
+    logger.debug('Decrypted file saved as: %s', decrypted_file_path)
+    return decrypted_file_path
 
 

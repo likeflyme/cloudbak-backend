@@ -42,9 +42,9 @@ def analyze(sys_session_id: int):
 
     # 3. 图片解码
     # 图片路径
-    logger.info("图片解码")
-    decrypt_images(sys_session)
-    logger.info("图片解码完成")
+    # logger.info("图片解码")
+    # decrypt_images(sys_session)
+    # logger.info("图片解码完成")
 
     # 4. 语音文件解码
 

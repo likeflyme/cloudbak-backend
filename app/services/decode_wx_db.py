@@ -29,7 +29,7 @@ def decode_msg(sys_session: SysSession):
     # 遍历
     for dirpath, dirnames, filenames in os.walk(msg_dir):
         for filename in filenames:
-            if filename.endswith('.db'):
+            if filename.endswith('.db') and not filename.startswith('decoded_'):
                 db_file = os.path.join(dirpath, filename)
                 # 解密，解密的文件为原文件名加 decoded_ 前缀
                 decode_one(db_file, password)

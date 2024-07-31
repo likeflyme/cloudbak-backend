@@ -16,6 +16,7 @@ from app.models.sys import SysSession
 from app.schemas import schemas
 from app.schemas.micro_msg import ChatRoom as ChatRoomSchema
 from app.services import parse_msg
+from app.services.decode_wx_pictures import decrypt_by_file_type, decrypt_file
 from config.log_config import logger
 from db.wx_db import wx_db_micro_msg, wx_db_msg0, get_session_local, wx_db_msg
 from config.wx_config import settings as wx_settings
@@ -123,8 +124,20 @@ def red_contact(page: int = 1,
 async def get_image(img_path: str, session_id: int):
     file_path = os.path.join(get_session_dir(session_id), img_path)
     logger.info(file_path)
-    if os.path.exists(file_path):
-        return FileResponse(str(file_path))
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    jpg_path = file_path.replace(".dat", ".jpg")
+    if os.path.exists(jpg_path):
+        return FileResponse(jpg_path)
+    png_path = file_path.replace(".dat", ".png")
+    if os.path.exists(png_path):
+        return FileResponse(png_path)
+    gif_path = file_path.replace(".dat", ".gif")
+    if os.path.exists(gif_path):
+        return FileResponse(gif_path)
+    decoded_path = decrypt_file(file_path)
+    if decoded_path:
+        return FileResponse(decoded_path)
     raise HTTPException(status_code=404, detail="File not found")
 
 
