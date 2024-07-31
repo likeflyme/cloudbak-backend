@@ -20,6 +20,7 @@ from app.services.decode_wx_pictures import decrypt_by_file_type, decrypt_file
 from config.log_config import logger
 from db.wx_db import wx_db_micro_msg, wx_db_msg0, get_session_local, wx_db_msg
 from config.wx_config import settings as wx_settings
+from sqlalchemy import select
 
 
 session_local_dict = defaultdict(lambda: None)
@@ -41,7 +42,11 @@ def red_sessions(db: Session = Depends(wx_db_micro_msg)):
     :param db:
     :return:
     """
-    return db.query(micro_msg.Session).order_by(micro_msg.Session.nOrder.desc()).all()
+    stmt = (select(micro_msg.Session)
+            .where(micro_msg.Session.strUsrName.notlike("gh_%"))
+            .where(micro_msg.Session.strUsrName.notlike("@%"))
+            .order_by(micro_msg.Session.nOrder.desc()))
+    return db.scalars(stmt)
 
 
 @router.get("/msg_by_svr_id", response_model=schemas.MsgWithExtra)
