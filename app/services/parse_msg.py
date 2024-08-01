@@ -30,13 +30,17 @@ def parse(msg: Msg, session_id: int):
             # 图片缩略图
             if f3.s1 == 3:
                 # nmsg.Thumb = dat_to_img(session_id, f3.s2)
-                nmsg.Thumb = f3.s2
+                if f3.s2:
+                    img_path = f3.s2.replace("\\", "/")
+                    nmsg.Thumb = img_path
             # 图片原图
             if f3.s1 == 4:
                 # nmsg.Image = dat_to_img(session_id, f3.s2)
-                file_path = os.path.join(get_session_dir(session_id), f3.s2)
-                if os.path.exists(file_path):
-                    nmsg.Image = f3.s2
+                if f3.s2:
+                    img_path = f3.s2.replace("\\", "/")
+                    file_path = os.path.join(get_session_dir(session_id), img_path)
+                    if os.path.exists(file_path):
+                        nmsg.Image = img_path
     if msg.CompressContent:
         unzipStr = lb.decompress(msg.CompressContent, uncompressed_size=0x10004)
         xml_data = unzipStr.decode('utf-8')
