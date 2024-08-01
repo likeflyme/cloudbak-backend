@@ -15,6 +15,7 @@ from app.services.save_head_images import save_header_images
 from app.services.sys_task_maker import TaskObj, task_execute
 from config.log_config import logger
 from db.sys_db import get_db
+from pathlib import Path
 
 router = APIRouter(
     prefix="/wx"
@@ -32,8 +33,8 @@ async def upload_zip(
         file_path: Optional[str] = Form(...),
         sys_session_id: Optional[int] = Form(...),
         wx_id: Optional[str] = Form(...)):
-    file_path = file_path.replace('\\', '/')
-    logger.info("文件路径：" + file_path)
+    file_path = Path(file_path)
+    logger.info("文件路径：" + str(file_path))
     wx_dir = get_wx_dir_directly(sys_session_id, wx_id)
     save_path = os.path.join(wx_dir, file_path)
 

@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+from pathlib import Path
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -127,6 +128,7 @@ def red_contact(page: int = 1,
 
 @router.get("/image")
 async def get_image(img_path: str, session_id: int):
+    img_path = Path(img_path)
     file_path = os.path.join(get_session_dir(session_id), img_path)
     logger.info(file_path)
     if not os.path.exists(file_path):
