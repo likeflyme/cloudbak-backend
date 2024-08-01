@@ -128,7 +128,7 @@ def red_contact(page: int = 1,
 
 @router.get("/image")
 async def get_image(img_path: str, session_id: int):
-    img_path = Path(img_path)
+    img_path = img_path.replace("\\", '/')
     file_path = os.path.join(get_session_dir(session_id), img_path)
     logger.info(file_path)
     if not os.path.exists(file_path):
