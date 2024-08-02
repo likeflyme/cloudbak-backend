@@ -5,6 +5,7 @@ import subprocess
 import lz4.block as lb
 import xmltodict
 
+from app.helper.directory_helper import get_wx_dir
 from app.models.micro_msg import Contact
 from app.models.proto import test_pb2, msg_bytes_extra_pb2
 from db.sys_db import SessionLocal
@@ -12,9 +13,10 @@ from db.wx_db import get_session_local
 from app.models.sys import SysUser, SysSession
 from app.dependencies.auth_dep import pwd_context
 from config.app_config import settings as app_settings
+from config.wx_config import settings as wx_settings
 from app.models.multi.msg import Msg
 
-msg0_db_path = os.path.join(app_settings.sys_dir, 'wx\\jianghu\\wxid_b125nd5rc59r12\\Msg\\Multi\\decoded_MSG0.db')
+msg0_db_path = os.path.join(app_settings.sys_dir, 'sessions\\1\\wxid_b125nd5rc59r12\Msg\\Multi\\decoded_MSG0.db')
 
 
 def create_user():
@@ -159,4 +161,19 @@ def decrypt_contact_ExtraBuf():
         db.close()
 
 
-create_user()
+def msg_db_count():
+    path = os.path.join("D:\\workspace\\sessions\\1\\wxid_b125nd5rc59r12", wx_settings.db_multi)
+
+    pattern = re.compile(r'^decoded_FTSMSG\d\.db$')
+    # 计数器
+    count = 0
+
+    # 遍历目录中的文件
+    for filename in os.listdir(path):
+        if pattern.match(filename):
+            print(filename)
+            count += 1
+    return count
+
+
+print(msg_db_count())
