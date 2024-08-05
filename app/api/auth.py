@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from fastapi import Depends, HTTPException, APIRouter, status
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth_dep import create_access_token, get_current_user, verify_password, get_current_sys_session
@@ -17,7 +18,9 @@ router = APIRouter(
 
 @router.post("/token")
 def create_token(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_db)) -> Token:
-    user = session.query(SysUser).filter_by(username=form_data.username).first()
+    user = session.query(SysUser).filter(
+        or_(SysUser.username == form_data.username, SysUser.email == form_data.username)
+    ).first()
     if not user or not verify_password(form_data.password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

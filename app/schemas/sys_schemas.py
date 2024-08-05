@@ -43,6 +43,12 @@ class UserInDB(User):
     hashed_password: str
 
 
+class UserCreate(BaseModel):
+    username: str
+    email: str
+    password: str
+
+
 class SysSessionIn(BaseModel):
     name: str | None = None
     desc: str | None = None

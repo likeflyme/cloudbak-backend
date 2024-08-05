@@ -17,6 +17,7 @@ class SysUser(Base):
     username = Column(String, unique=True)
     password = Column(String)
     nickname = Column(String)
+    email = Column(String)
     current_session_id = Column(Integer, default=None)
     state = Column(Integer)
     create_time = Column(Integer, default=time.time())

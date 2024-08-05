@@ -1,17 +1,43 @@
 from typing import List
 
-from fastapi import Depends, APIRouter
+from fastapi import Depends, APIRouter, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.dependencies.auth_dep import get_current_user
+from app.dependencies.auth_dep import get_current_user, pwd_context
 from app.models.sys import SysUser, SysSession
-from app.schemas.sys_schemas import SysSessionSchemaWithId, SysSessionIn, SysSessionOut
+from app.schemas.sys_schemas import SysSessionSchemaWithId, SysSessionIn, SysSessionOut, UserCreate
 from config.log_config import logger
 from db.sys_db import get_db
 
 router = APIRouter(
     prefix="/user"
 )
+
+
+@router.get("/check-install")
+def check_install(db: Session = Depends(get_db)):
+    count = db.query(SysUser).count()
+    return {"count": count}
+
+
+@router.post("/create-user")
+def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
+    user_count = db.query(SysUser).filter_by(username=user_in.username).count()
+    if user_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="用户名已使用",
+        )
+    email_count = db.query(SysUser).filter_by(email=user_in.email).count()
+    if email_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="邮箱已被使用",
+        )
+    user = SysUser(**user_in.model_dump())
+    user.password = pwd_context.hash(user_in.password)
+    db.add(user)
+    db.commit()
 
 
 @router.put("/set-current-session-id", response_model=SysSessionSchemaWithId)
