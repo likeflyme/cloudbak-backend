@@ -1,7 +1,7 @@
 import os
 from collections import defaultdict
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
@@ -16,10 +16,11 @@ from app.models.multi.msg import Name2ID
 from app.models.sys import SysSession
 from app.schemas import schemas
 from app.schemas.micro_msg import ChatRoom as ChatRoomSchema
+from app.schemas.schemas import ChatMsg
 from app.services import parse_msg
 from app.services.decode_wx_pictures import decrypt_by_file_type, decrypt_file
 from config.log_config import logger
-from db.wx_db import wx_db_micro_msg, wx_db_msg0, get_session_local, wx_db_msg
+from db.wx_db import wx_db_micro_msg, wx_db_msg0, get_session_local, wx_db_msg, msg_db_count
 from config.wx_config import settings as wx_settings
 from sqlalchemy import select
 
@@ -60,54 +61,74 @@ def red_msg_by_svr_id(svr_id: int,
     return None
 
 
-@router.get("/msgs", response_model=List[schemas.MsgWithExtra])
+@router.get("/msgs", response_model=ChatMsg)
 def red_msgs(strUsrName: str,
              page: int = 1,
              size: int = 20,
+             start: Optional[int] = 0,
+             dbNo: Optional[int] = None,
              sys_session: SysSession = Depends(get_current_sys_session)):
     """
     分页查询用户分页消息
     :param strUsrName: 微信号
     :param page: 页码
     :param size: 分页大小
+    :param start: 数据库起始偏移值
+    :param dbNo: 数据库编号
     :param sys_session: 用户 session
     :return: 分页数据
     """
     logger.info(f'strUsrName: {strUsrName}')
-    sl = session_local_dict[strUsrName]
-    if sl is None:
-        for c in range(0, wx_settings.max_msg):
-            session_local = wx_db_msg(c, sys_session)
-            if not session_local:
-                continue
-            db = session_local()
-            try:
-                name = db.query(Name2ID).filter_by(UsrName=strUsrName).first()
-                if name:
-                    session_local_dict[strUsrName] = session_local
-                    sl = session_local
-            finally:
-                db.close()
-    if not sl:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="用户错误，找不到数据源",
-        )
-    db = sl()
-    try:
-        # 再根据id查询消息列表
-        msgs = (db.query(msg.Msg)
-                .filter_by(StrTalker=strUsrName)
-                .order_by(msg.Msg.localId.desc())
-                .offset((page - 1) * size).limit(size))
-        results = []
-        # 反序列化 ByteExtra 字段
-        for n in msgs:
-            nmsg = parse_msg.parse(n, sys_session.id)
-            results.append(nmsg)
-    finally:
-        db.close()
-    return results
+    current_db_no = 0
+    if dbNo == -1:
+        dbNo = msg_db_count(sys_session) - 1
+        logger.info(f"数据库最大值 {dbNo}")
+
+    results = []
+    # 跨库查询
+    for num in range(dbNo, -1, -1):
+        logger.info(f"查询库 {num}")
+        session_local = wx_db_msg(num, sys_session)
+        db = session_local()
+        logger.info(f"已查询的数据量 {len(results)}")
+        query_size = size - len(results)
+        logger.info(f"查询量 {query_size}")
+        logger.info(f"起始偏移 {start}")
+        current_db_no = num
+        logger.info(f"当前库 {current_db_no}")
+        try:
+            # 再根据id查询消息列表
+            msgs = (db.query(msg.Msg)
+                    .filter_by(StrTalker=strUsrName)
+                    .order_by(msg.Msg.Sequence.desc())
+                    .offset((page - 1) * size + start).limit(query_size))
+            logger.info(str(msgs.statement.compile(compile_kwargs={"literal_binds": True})))
+            # 反序列化 ByteExtra 字段
+            m = msgs.all()
+            logger.info(f"数据量 {len(m)}")
+            for n in m:
+                nmsg = parse_msg.parse(n, sys_session.id)
+                results.append(nmsg)
+            if len(results) >= size:
+                if len(m) < size:
+                    start = len(m)
+                    logger.info(f"查询结束，设置起始偏移为 {start}")
+                break
+            # 修改起始偏移
+            start = 0
+            # 重置页码
+            logger.info(f"当前库数据不够一页 {size}，重置页码为 1，继续查询下一个库")
+            page = 1
+        finally:
+            db.close()
+
+
+    data = {
+        "dbNo": current_db_no,
+        "start": start,
+        "msgs": results
+    }
+    return data
 
 
 @router.get("/contact", response_model=List[schemas.ContactBase])

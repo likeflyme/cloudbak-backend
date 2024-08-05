@@ -1,4 +1,5 @@
 import os
+import re
 from collections import defaultdict
 
 from fastapi import Depends
@@ -34,8 +35,23 @@ def get_session_local(db_path):
     return session_local_dict[db_path]
 
 
+def msg_db_count(sys_session: SysSession) -> int:
+    path = os.path.join(get_wx_dir(sys_session), wx_settings.db_multi)
+
+    pattern = re.compile(r'^MSG\d+\.db$')
+    # 计数器
+    count = 0
+
+    # 遍历目录中的文件
+    for filename in os.listdir(path):
+        if pattern.match(filename):
+            count += 1
+    return count
+
+
 def wx_db_msg(c: int, sys_session: SysSession):
     db_path = os.path.join(get_wx_dir(sys_session), wx_settings.db_multi_msg + str(c) + '.db')
+    logger.info(f"{db_path}")
     if not os.path.exists(db_path):
         return None
     return get_session_local(db_path)

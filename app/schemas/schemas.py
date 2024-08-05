@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 from pydantic import BaseModel
 
@@ -34,6 +34,12 @@ class MsgWithExtra(MsgBase):
 
     class Config:
         from_attributes = True
+
+
+class ChatMsg(BaseModel):
+    dbNo: int
+    start: int
+    msgs: List[MsgWithExtra]
 
 
 class SessionBaseOut(BaseModel):

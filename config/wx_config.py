@@ -2,6 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    db_multi: str = 'Msg/Multi'
     db_multi_msg: str = 'Msg/Multi/decoded_MSG'
     db_micro_msg: str = 'Msg/decoded_MicroMsg.db'
     db_misc: str = 'Msg/decoded_Misc.db'
