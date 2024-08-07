@@ -13,6 +13,7 @@ from config.auth_config import settings
 from db.sys_db import get_db
 from config.cache_config import cache_half_hour
 from config.log_config import logger
+from passlib.handlers import bcrypt
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
