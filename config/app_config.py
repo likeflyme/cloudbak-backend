@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     log_dir: str = 'logs'
     log_file_name: str = 'app.log'
     sessions_dir: str = 'sessions'
+    server_host: str = '0.0.0.0'
+    server_port: int = 8000
 
     class Config:
         env_prefix = 'APP_'
