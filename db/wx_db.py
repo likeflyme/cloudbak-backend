@@ -57,6 +57,14 @@ def wx_db_msg(c: int, sys_session: SysSession):
     return get_session_local(db_path)
 
 
+def wx_db_media_msg(c: int, sys_session):
+    db_path = os.path.join(get_wx_dir(sys_session), wx_settings.db_multi_media_msg + str(c) + '.db')
+    logger.info(f"{db_path}")
+    if not os.path.exists(db_path):
+        return None
+    return get_session_local(db_path)
+
+
 def wx_db_msg0(curren_session: SysSession = Depends(get_current_sys_session)):
     """
     获取 multi/MSG0.db 数据库 session

@@ -1,20 +1,22 @@
 import os.path
 import re
 import subprocess
+import pilk
+import os
 
 import lz4.block as lb
-import xmltodict
 
+from app.dependencies.auth_dep import pwd_context
 from app.models.micro_msg import Contact
+from app.models.multi.media_msg import Media
+from app.models.multi.msg import Msg
 from app.models.proto import test_pb2, msg_bytes_extra_pb2
+from app.models.sys import SysUser
+from config.app_config import settings as app_settings
 from db.sys_db import SessionLocal
 from db.wx_db import get_session_local
-from app.models.sys import SysUser, SysSession
-from app.dependencies.auth_dep import pwd_context
-from config.app_config import settings as app_settings
-from app.models.multi.msg import Msg
 
-msg0_db_path = os.path.join(app_settings.sys_dir, 'sessions\\1\\wxid_b125nd5rc59r12\\Msg\\Multi\\decoded_MSG0.db')
+msg0_db_path = os.path.join(app_settings.sys_dir, 'sessions\\1\\wxid_b125nd5rc59r12\\Msg\\Multi\\decoded_MSG6.db')
 
 
 def create_user():
@@ -135,6 +137,39 @@ def deserialize_img():
         db.close()
 
 
+def deserialize_vedio():
+    session_local = get_session_local(msg0_db_path)
+    db = session_local()
+    try:
+        # msg = db.query(Msg).filter_by(localId=3540).first()
+        msg = db.query(Msg).filter_by(localId=44695).first()
+        print(msg)
+        if msg:
+            print('-----decode protobuf-------')
+            print(decode_protobuf(msg.BytesExtra))
+            # print(decode_protobuf(msg.CompressContent))
+
+            # print('-----lz4 decompress compress content-----')
+            # unzipStr = lb.decompress(msg.CompressContent, uncompressed_size=0x10004)
+            # text = unzipStr.decode('utf-8')
+            # print(text)
+            # # print(xml_data)
+            # compress_content_dict = xmltodict.parse(clean_xml_data(text))
+            # print(compress_content_dict)
+
+            be = msg_bytes_extra_pb2.BytesExtra()
+            be.ParseFromString(msg.BytesExtra)
+
+            print('print f1')
+            for f1 in be.f1:
+                print(f'{f1.s1}: {f1.s2}')
+            print('print f3')
+            for f3 in be.f3:
+                print(f'{f3.s1}: {f3.s2}')
+    finally:
+        db.close()
+
+
 # 清理XML数据函数
 def clean_xml_data(xml_str):
     # 删除非XML字符
@@ -159,4 +194,29 @@ def decrypt_contact_ExtraBuf():
         db.close()
 
 
-deserialize_img()
+def decode_media(data):
+    silk_mame = 'D:\\workspace\\test.silk'
+    pcm_name = 'D:\\workspace\\test.pcm'
+    mp3_name = 'D:\\workspace\\test.mp3'
+    with open(silk_mame, 'wb') as file:
+        # 将字节数组写入文件
+        file.write(data)
+    # silk 转 pcm
+    pilk.decode(silk_mame, pcm_name, 44100)
+    # pcm 转 mp3
+    os.system(f"ffmpeg -y -f s16le -i {pcm_name} -ar 44100 -ac 1 {mp3_name}")
+
+
+# mediadb = os.path.join(app_settings.sys_dir, 'sessions\\1\\wxid_b125nd5rc59r12\\Msg\\Multi\\decoded_MediaMSG5.db')
+# session_local = get_session_local(mediadb)
+# db = session_local()
+# try:
+#     msg = db.query(Media).filter_by(Reserved0=2824614231503923834).first()
+#     print(msg)
+#     if msg:
+#         decode_media(msg.Buf)
+# finally:
+#     db.close()
+
+deserialize_vedio()
+

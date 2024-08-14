@@ -18,8 +18,10 @@ def clean_xml_data(xml_str):
     return xml_str
 
 
-def parse(msg: Msg, session_id: int):
+def parse(msg: Msg, session_id: int, db_no: int):
     nmsg = MsgWithExtra(**msg.__dict__)
+    nmsg.MsgSvrIDStr = str(msg.MsgSvrID)
+    nmsg.DbNo = db_no
     if msg.BytesExtra:
         proto = msg_bytes_extra_pb2.BytesExtra()
         proto.ParseFromString(msg.BytesExtra)

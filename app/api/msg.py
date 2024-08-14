@@ -1,29 +1,28 @@
 import os
 from collections import defaultdict
-from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth_dep import get_current_sys_session
-from app.helper.directory_helper import get_session_dir, get_wx_dir
+from app.helper.directory_helper import get_session_dir, get_decoded_media_path
 from app.models import micro_msg
 from app.models.micro_msg import Contact, ChatRoom
 from app.models.multi import msg
-from app.models.multi.msg import Name2ID
+from app.models.multi.media_msg import Media
 from app.models.sys import SysSession
 from app.schemas import schemas
 from app.schemas.micro_msg import ChatRoom as ChatRoomSchema
 from app.schemas.schemas import ChatMsg
 from app.services import parse_msg
-from app.services.decode_wx_pictures import decrypt_by_file_type, decrypt_file
+from app.services.decode_wx_media import decode_media
+from app.services.decode_wx_pictures import decrypt_file
 from config.log_config import logger
-from db.wx_db import wx_db_micro_msg, wx_db_msg0, get_session_local, wx_db_msg, msg_db_count
-from config.wx_config import settings as wx_settings
-from sqlalchemy import select
-
+from db.sys_db import get_db
+from db.wx_db import wx_db_micro_msg, wx_db_msg0, wx_db_msg, msg_db_count, wx_db_media_msg
 
 session_local_dict = defaultdict(lambda: None)
 
@@ -53,11 +52,13 @@ def red_sessions(db: Session = Depends(wx_db_micro_msg)):
 
 @router.get("/msg_by_svr_id", response_model=schemas.MsgWithExtra)
 def red_msg_by_svr_id(svr_id: int,
-                      db: Session = Depends(wx_db_msg0),
+                      db_no: int,
                       sys_session: SysSession = Depends(get_current_sys_session)):
+    session_local = wx_db_msg(db_no, sys_session)
+    db = session_local()
     result = db.query(msg.Msg).filter_by(MsgSvrID=svr_id).first()
     if result:
-        return parse_msg.parse(result, sys_session.name)
+        return parse_msg.parse(result, sys_session.id, db_no)
     return None
 
 
@@ -100,14 +101,14 @@ def red_msgs(strUsrName: str,
             # 再根据id查询消息列表
             msgs = (db.query(msg.Msg)
                     .filter_by(StrTalker=strUsrName)
-                    .order_by(msg.Msg.Sequence.desc())
+                    .order_by(msg.Msg.CreateTime.desc(), msg.Msg.Sequence.desc())
                     .offset((page - 1) * size + start).limit(query_size))
             logger.info(str(msgs.statement.compile(compile_kwargs={"literal_binds": True})))
             # 反序列化 ByteExtra 字段
             m = msgs.all()
             logger.info(f"数据量 {len(m)}")
             for n in m:
-                nmsg = parse_msg.parse(n, sys_session.id)
+                nmsg = parse_msg.parse(n, sys_session.id, num)
                 results.append(nmsg)
             if len(results) >= size:
                 if len(m) < size:
@@ -166,6 +167,27 @@ async def get_image(img_path: str, session_id: int):
     decoded_path = decrypt_file(file_path)
     if decoded_path:
         return FileResponse(decoded_path)
+    raise HTTPException(status_code=404, detail="File not found")
+
+
+@router.get("/media")
+async def get_image(
+        MsgSvrID: str,
+        session_id: int,
+        db_no: int,
+        db: Session = Depends(get_db)):
+    sys_session = db.query(SysSession).filter_by(id=session_id).first()
+    media_folder = get_decoded_media_path(sys_session)
+    mp3_name = os.path.join(media_folder, f"{MsgSvrID}.mp3")
+    if os.path.exists(mp3_name):
+        return FileResponse(mp3_name)
+    else:
+        session_local = wx_db_media_msg(db_no, sys_session)
+        media_db = session_local()
+        media = media_db.query(Media).filter_by(Reserved0=MsgSvrID).first()
+        if media:
+            mp3_name = decode_media(media_folder, MsgSvrID, media.Buf)
+            return FileResponse(mp3_name)
     raise HTTPException(status_code=404, detail="File not found")
 
 

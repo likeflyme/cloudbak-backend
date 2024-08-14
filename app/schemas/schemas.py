@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class MsgBase(BaseModel):
     localId: int
     TalkerId: int
+    MsgSvrIDStr: Optional[str] = None
     Type: int
     SubType: int
     IsSender: int
@@ -31,6 +32,7 @@ class MsgWithExtra(MsgBase):
     Thumb: Optional[str] = None
     Image: Optional[str] = None
     compress_content: Optional[Dict] = None
+    DbNo: Optional[int] = None
 
     class Config:
         from_attributes = True

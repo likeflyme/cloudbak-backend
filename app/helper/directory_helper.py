@@ -44,3 +44,6 @@ def get_db_misc_path(sys_session: SysSession) -> str:
 def get_db_hard_link_image_path(sys_session: SysSession) -> str:
     return os.path.join(get_wx_dir(sys_session), wx_settings.db_hard_link_image)
 
+
+def get_decoded_media_path(sys_session: SysSession) -> str:
+    return os.path.join(get_wx_dir(sys_session), wx_settings.decoded_media_path)
