@@ -22,7 +22,7 @@ from app.services.decode_wx_media import decode_media
 from app.services.decode_wx_pictures import decrypt_file
 from config.log_config import logger
 from db.sys_db import get_db
-from db.wx_db import wx_db_micro_msg, wx_db_msg0, wx_db_msg, msg_db_count, wx_db_media_msg
+from db.wx_db import wx_db_micro_msg, wx_db_msg, msg_db_count, wx_db_media_msg
 
 session_local_dict = defaultdict(lambda: None)
 
@@ -199,6 +199,16 @@ async def get_image(path: str, session_id: int):
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(file_path)
+
+
+@router.get("/video")
+async def get_image(video_path: str, session_id: int):
+    video_path = video_path.replace("\\", '/')
+    file_path = os.path.join(get_session_dir(session_id), video_path)
+    logger.info(file_path)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(file_path, media_type="video/mp4")
 
 
 @router.get("/chatroom-info", response_model=ChatRoomSchema)
