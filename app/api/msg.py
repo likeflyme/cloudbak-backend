@@ -191,6 +191,16 @@ async def get_image(
     raise HTTPException(status_code=404, detail="File not found")
 
 
+@router.get("/file")
+async def get_image(path: str, session_id: int):
+    file_path = path.replace("\\", '/')
+    file_path = os.path.join(get_session_dir(session_id), file_path)
+    logger.info(file_path)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(file_path)
+
+
 @router.get("/chatroom-info", response_model=ChatRoomSchema)
 async def get_image(chat_room_name: str, db: Session = Depends(wx_db_micro_msg)):
     return db.query(ChatRoom).filter_by(ChatRoomName=chat_room_name).first()
