@@ -43,7 +43,7 @@ async def upload_zip(
     directory.mkdir(parents=True, exist_ok=True)
 
     logger.info("保存路径：" + save_path)
-    with open(save_path, "ab") as f:
+    with open(save_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
 

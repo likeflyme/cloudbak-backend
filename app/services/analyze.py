@@ -5,6 +5,7 @@ from app.models.sys import SysSession
 from app.services.decode_wx_db import decode_msg
 from config.log_config import logger
 from db.sys_db import SessionLocal
+from db.wx_db import clear_wx_db_cache
 from .decode_wx_pictures import decrypt_images
 from .save_head_images import save_header_images
 from ..helper.directory_helper import get_session_dir, get_wx_dir
@@ -48,4 +49,6 @@ def analyze(sys_session_id: int):
 
     # 4. 语音文件解码
 
+    # 清除微信数据库链接缓存
+    clear_wx_db_cache()
 

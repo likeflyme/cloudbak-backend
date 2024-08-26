@@ -21,6 +21,10 @@ Base = declarative_base()
 session_local_dict = defaultdict(lambda: None)
 
 
+def clear_wx_db_cache():
+    session_local_dict.clear()
+
+
 def get_session_local(db_path):
     """
     获取对应数据库文件的 session local
