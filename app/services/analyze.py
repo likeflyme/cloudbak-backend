@@ -50,5 +50,6 @@ def analyze(sys_session_id: int):
     # 4. 语音文件解码
 
     # 清除微信数据库链接缓存
+    logger.info("清除缓存数据库连接")
     clear_wx_db_cache()
 
