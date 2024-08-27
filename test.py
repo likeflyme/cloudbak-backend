@@ -19,6 +19,9 @@ from db.wx_db import get_session_local
 msg0_db_path = os.path.join(app_settings.sys_dir, 'sessions\\1\\wxid_b125nd5rc59r12\\Msg\\Multi\\decoded_MSG6.db')
 
 
+
+
+
 def create_user():
     """
     创建新用户
