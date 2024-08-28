@@ -95,6 +95,8 @@ class SysSessionOut(BaseModel):
     wx_dir: str | None = None
     owner_id: int
     analyze_state: int
+    create_time: int
+    update_time: int
 
     class Config:
         from_attributes = True

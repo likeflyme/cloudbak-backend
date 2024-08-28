@@ -101,7 +101,7 @@ def red_msgs(strUsrName: str,
             # 再根据id查询消息列表
             msgs = (db.query(msg.Msg)
                     .filter_by(StrTalker=strUsrName)
-                    .order_by(msg.Msg.CreateTime.desc(), msg.Msg.Sequence.desc())
+                    .order_by(msg.Msg.MsgSequence.desc())
                     .offset((page - 1) * size + start).limit(query_size))
             logger.info(str(msgs.statement.compile(compile_kwargs={"literal_binds": True})))
             # 反序列化 ByteExtra 字段
@@ -151,8 +151,17 @@ def red_contact(page: int = 1,
 @router.get("/image")
 async def get_image(img_path: str, session_id: int):
     img_path = img_path.replace("\\", '/')
-    file_path = os.path.join(get_session_dir(session_id), img_path)
+    base_dir = get_session_dir(session_id)
+    file_path = os.path.join(base_dir, img_path)
     logger.info(file_path)
+
+    # 确保 file_path 是 base_dir 的子路径
+    abs_file_path = os.path.abspath(file_path)
+    abs_base_dir = os.path.abspath(base_dir)
+
+    if not abs_file_path.startswith(abs_base_dir):
+        raise HTTPException(status_code=403, detail="Invalid path")
+
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
     jpg_path = file_path.replace(".dat", ".jpg")
@@ -171,7 +180,7 @@ async def get_image(img_path: str, session_id: int):
 
 
 @router.get("/media")
-async def get_image(
+async def get_media(
         MsgSvrID: str,
         session_id: int,
         db_no: int,
@@ -192,20 +201,38 @@ async def get_image(
 
 
 @router.get("/file")
-async def get_image(path: str, session_id: int):
+async def get_file(path: str, session_id: int):
     file_path = path.replace("\\", '/')
-    file_path = os.path.join(get_session_dir(session_id), file_path)
+    base_dir = get_session_dir(session_id)
+    file_path = os.path.join(base_dir, file_path)
     logger.info(file_path)
+
+    # 确保 file_path 是 base_dir 的子路径
+    abs_file_path = os.path.abspath(file_path)
+    abs_base_dir = os.path.abspath(base_dir)
+
+    if not abs_file_path.startswith(abs_base_dir):
+        raise HTTPException(status_code=403, detail="Invalid path")
+
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(file_path)
 
 
 @router.get("/video")
-async def get_image(video_path: str, session_id: int):
+async def get_video(video_path: str, session_id: int):
     video_path = video_path.replace("\\", '/')
+    base_dir = get_session_dir(session_id)
     file_path = os.path.join(get_session_dir(session_id), video_path)
     logger.info(file_path)
+
+    # 确保 file_path 是 base_dir 的子路径
+    abs_file_path = os.path.abspath(file_path)
+    abs_base_dir = os.path.abspath(base_dir)
+
+    if not abs_file_path.startswith(abs_base_dir):
+        raise HTTPException(status_code=403, detail="Invalid path")
+
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(file_path, media_type="video/mp4")

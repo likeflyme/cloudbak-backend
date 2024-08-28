@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 from pathlib import Path
 from typing import Optional, List
 
@@ -9,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.dependencies.auth_dep import get_current_user
 from app.helper.directory_helper import get_session_dir, get_wx_dir, get_wx_dir_directly
 from app.models.sys import SysSession
-from app.schemas.sys_schemas import User, CreateSysSessionSchema, SysSessionSchema
+from app.schemas.sys_schemas import User, CreateSysSessionSchema, SysSessionSchema, SysSessionOut
 from app.services.analyze import analyze
 from app.services.save_head_images import save_header_images
 from app.services.sys_task_maker import TaskObj, task_execute
@@ -76,13 +77,20 @@ async def upload_zip(
         return {"detail": "Upload incomplete."}
 
 
-@router.post("/do-decrypt/{sys_session_id}")
+@router.post("/do-decrypt/{sys_session_id}", response_model=SysSessionOut)
 def de_decrypt(sys_session_id: int,
                background_tasks: BackgroundTasks,
-               sys_user: User = Depends(get_current_user)):
+               update_time: int = int(time.time()),
+               db: Session = Depends(get_db)):
+    sys_session = db.query(SysSession).filter_by(id=sys_session_id).first()
+    sys_session.update_time = update_time
+    db.commit()
+    db.refresh(sys_session)
+    logger.info("设置同步时间：")
     logger.info("解析任务")
     task_obj = TaskObj(1, "数据解析任务", analyze, sys_session_id)
     background_tasks.add_task(task_execute, task_obj)
+    return sys_session
 
 
 @router.get("/save-head-images/")
