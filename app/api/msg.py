@@ -101,7 +101,7 @@ def red_msgs(strUsrName: str,
             # 再根据id查询消息列表
             msgs = (db.query(msg.Msg)
                     .filter_by(StrTalker=strUsrName)
-                    .order_by(msg.Msg.MsgSequence.desc())
+                    .order_by(msg.Msg.CreateTime.desc(), msg.Msg.Sequence.desc())
                     .offset((page - 1) * size + start).limit(query_size))
             logger.info(str(msgs.statement.compile(compile_kwargs={"literal_binds": True})))
             # 反序列化 ByteExtra 字段
@@ -122,8 +122,6 @@ def red_msgs(strUsrName: str,
             page = 1
         finally:
             db.close()
-
-
     data = {
         "dbNo": current_db_no,
         "start": start,
