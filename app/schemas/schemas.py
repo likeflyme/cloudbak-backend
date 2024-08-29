@@ -33,6 +33,10 @@ class MsgWithExtra(MsgBase):
     Image: Optional[str] = None
     compress_content: Optional[Dict] = None
     DbNo: Optional[int] = None
+    smallHeadImgUrl: Optional[str] = None
+    bigHeadImgUrl: Optional[str] = None
+    Remark: Optional[str] = None
+    NickName: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -49,6 +53,19 @@ class SessionBaseOut(BaseModel):
     strNickName: str
     strContent: Optional[str] = None
     nTime: Optional[int] = None
+    smallHeadImgUrl: Optional[str] = None
+    bigHeadImgUrl: Optional[str] = None
+    headImgMd5: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ContactHeadImgUrlOut(BaseModel):
+    usrName: str
+    smallHeadImgUrl: Optional[str] = None
+    bigHeadImgUrl: Optional[str] = None
+    headImgMd5: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -99,6 +116,12 @@ class ContactBase(BaseModel):
     PYInitial: Optional[str] = None
     QuanPin: Optional[str] = None
     RemarkPYInitial: Optional[str] = None
+
+
+class ContactWithHeadImg(ContactBase):
+    smallHeadImgUrl: Optional[str] = None
+    bigHeadImgUrl: Optional[str] = None
+    headImgMd5: Optional[str] = None
 
 
 class Contact(BaseModel):

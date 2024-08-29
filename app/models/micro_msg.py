@@ -87,3 +87,15 @@ class ChatRoom(Base):
     Reserved7 = Column(Integer)
     Reserved8 = Column(String)
 
+
+class ContactHeadImgUrl(Base):
+    __tablename__ = 'ContactHeadImgUrl'
+    __table_args__ = {'extend_existing': True}
+
+    usrName = Column(String, primary_key=True)
+    smallHeadImgUrl = Column(String)
+    bigHeadImgUrl = Column(String)
+    headImgMd5 = Column(String)
+    reverse0 = Column(Integer)
+    reverse1 = Column(String)
+

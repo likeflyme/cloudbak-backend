@@ -4,19 +4,19 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth_dep import get_current_sys_session
 from app.helper.directory_helper import get_session_dir, get_decoded_media_path
 from app.models import micro_msg
-from app.models.micro_msg import Contact, ChatRoom
+from app.models.micro_msg import Contact, ChatRoom, ContactHeadImgUrl
 from app.models.multi import msg
 from app.models.multi.media_msg import Media
 from app.models.sys import SysSession
 from app.schemas import schemas
 from app.schemas.micro_msg import ChatRoom as ChatRoomSchema
-from app.schemas.schemas import ChatMsg
+from app.schemas.schemas import ChatMsg, ContactHeadImgUrlOut
 from app.services import parse_msg
 from app.services.decode_wx_media import decode_media
 from app.services.decode_wx_pictures import decrypt_file
@@ -33,21 +33,49 @@ router = APIRouter(
 
 @router.get("/session", response_model=schemas.SessionBaseOut)
 def red_session(strUsrName: str, db: Session = Depends(wx_db_micro_msg)):
-    return db.query(micro_msg.Session).filter_by(strUsrName=strUsrName).first()
+    stmt = (
+        select(micro_msg.Session, micro_msg.ContactHeadImgUrl)
+        .join(micro_msg.ContactHeadImgUrl, micro_msg.Session.strUsrName == micro_msg.ContactHeadImgUrl.usrName)
+        .where(micro_msg.Session.strUsrName == strUsrName)
+    )
+    print(stmt)
+    session, img = db.execute(stmt).one()
+    return schemas.SessionBaseOut(
+            **session.__dict__,
+            smallHeadImgUrl=img.smallHeadImgUrl,
+            bigHeadImgUrl=img.bigHeadImgUrl,
+            headImgMd5=img.headImgMd5
+        )
 
 
 @router.get("/sessions", response_model=List[schemas.SessionBaseOut])
-def red_sessions(db: Session = Depends(wx_db_micro_msg)):
+def red_sessions(page: int = 1, size: int = 20, db: Session = Depends(wx_db_micro_msg)):
     """
     查询会话分页列表
+    :param page:
+    :param size:
     :param db:
     :return:
     """
-    stmt = (select(micro_msg.Session)
-            .where(micro_msg.Session.strUsrName.notlike("gh_%"))
-            .where(micro_msg.Session.strUsrName.notlike("@%"))
-            .order_by(micro_msg.Session.nOrder.desc()))
-    return db.scalars(stmt)
+    stmt = (
+        select(micro_msg.Session, micro_msg.ContactHeadImgUrl)
+        .join(micro_msg.ContactHeadImgUrl, micro_msg.Session.strUsrName == micro_msg.ContactHeadImgUrl.usrName)
+        .where(micro_msg.Session.strUsrName.notlike("gh_%"))
+        .where(micro_msg.Session.strUsrName.notlike("@%"))
+        .order_by(micro_msg.Session.nOrder.desc())
+        .offset((page - 1) * size)
+        .limit(size)
+    )
+    results = db.execute(stmt).all()
+    return [
+        schemas.SessionBaseOut(
+            **session.__dict__,
+            smallHeadImgUrl=contact_head_img_url.smallHeadImgUrl,
+            bigHeadImgUrl=contact_head_img_url.bigHeadImgUrl,
+            headImgMd5=contact_head_img_url.headImgMd5
+        )
+        for session, contact_head_img_url in results
+    ]
 
 
 @router.get("/msg_by_svr_id", response_model=schemas.MsgWithExtra)
@@ -68,9 +96,11 @@ def red_msgs(strUsrName: str,
              size: int = 20,
              start: Optional[int] = 0,
              dbNo: Optional[int] = None,
+             micro_db: Session = Depends(wx_db_micro_msg),
              sys_session: SysSession = Depends(get_current_sys_session)):
     """
     分页查询用户分页消息
+    :param micro_db:
     :param strUsrName: 微信号
     :param page: 页码
     :param size: 分页大小
@@ -107,9 +137,30 @@ def red_msgs(strUsrName: str,
             # 反序列化 ByteExtra 字段
             m = msgs.all()
             logger.info(f"数据量 {len(m)}")
+            # 数据转换
             for n in m:
                 nmsg = parse_msg.parse(n, sys_session.id, num)
                 results.append(nmsg)
+                # 群聊
+                if strUsrName.endswith("@chatroom"):
+                    if nmsg.WxId:
+                        stmt = (
+                            select(micro_msg.Contact, micro_msg.ContactHeadImgUrl)
+                            .outerjoin(micro_msg.ContactHeadImgUrl,
+                                       micro_msg.Contact.UserName == micro_msg.ContactHeadImgUrl.usrName)
+                            .where(micro_msg.Contact.UserName == nmsg.WxId)
+                        )
+                        contact, img = micro_db.execute(stmt).first()
+                        if contact:
+                            nmsg.Remark = contact.Remark
+                            nmsg.NickName = contact.NickName
+                        if img:
+                            nmsg.smallHeadImgUrl = img.smallHeadImgUrl
+                            nmsg.bigHeadImgUrl = img.bigHeadImgUrl
+
+
+
+
             if len(results) >= size:
                 if len(m) < size:
                     start = len(m)
@@ -135,15 +186,47 @@ def red_contact(db: Session = Depends(wx_db_micro_msg)):
     return db.query(Contact).filter(Contact.NickName != "").all()
 
 
-@router.get("/contact-split", response_model=List[schemas.ContactBase])
+@router.get("/contact-split", response_model=List[schemas.ContactWithHeadImg])
 def red_contact(page: int = 1,
                 size: int = 20,
                 ChatRoomType: int = 0,
                 db: Session = Depends(wx_db_micro_msg)):
-    return (db.query(Contact)
-            .filter(Contact.NickName != "", Contact.Type != 0, Contact.ChatRoomType == ChatRoomType)
-            .order_by(Contact.NickName.asc())
-            .offset((page - 1) * size).limit(size))
+    if ChatRoomType == 0:
+        stmt = (
+            select(micro_msg.Contact, micro_msg.ContactHeadImgUrl)
+            .join(micro_msg.ContactHeadImgUrl, micro_msg.Contact.UserName == micro_msg.ContactHeadImgUrl.usrName)
+            .where(micro_msg.Contact.UserName.notlike("%@chatroom"))
+            .where(~micro_msg.Contact.Type.in_([0, 1, 2, 4]))
+            .order_by(micro_msg.Contact.NickName.asc())
+            .offset((page - 1) * size)
+            .limit(size)
+        )
+    else:
+        stmt = (
+            select(micro_msg.Contact, micro_msg.ContactHeadImgUrl)
+            .join(micro_msg.ContactHeadImgUrl, micro_msg.Contact.UserName == micro_msg.ContactHeadImgUrl.usrName)
+            .where(micro_msg.Contact.UserName.like("%@chatroom"))
+            .where(
+                and_(
+                    micro_msg.Contact.NickName.isnot(None),
+                    micro_msg.Contact.NickName != ""
+                )
+            )
+            .order_by(micro_msg.Contact.NickName.asc())
+            .offset((page - 1) * size)
+            .limit(size)
+        )
+
+    results = db.execute(stmt).all()
+    return [
+        schemas.ContactWithHeadImg(
+            **contact.__dict__,
+            smallHeadImgUrl=contact_head_img_url.smallHeadImgUrl,
+            bigHeadImgUrl=contact_head_img_url.bigHeadImgUrl,
+            headImgMd5=contact_head_img_url.headImgMd5
+        )
+        for contact, contact_head_img_url in results
+    ]
 
 
 @router.get("/image")
@@ -237,6 +320,34 @@ async def get_video(video_path: str, session_id: int):
 
 
 @router.get("/chatroom-info", response_model=ChatRoomSchema)
-async def get_image(chat_room_name: str, db: Session = Depends(wx_db_micro_msg)):
-    return db.query(ChatRoom).filter_by(ChatRoomName=chat_room_name).first()
+async def get_chatroom_info(chat_room_name: str, db: Session = Depends(wx_db_micro_msg)):
+    chat_room = db.query(ChatRoom).filter_by(ChatRoomName=chat_room_name).first()
+    out = ChatRoomSchema(**chat_room.__dict__)
+    contact = db.query(Contact).filter_by(UserName=chat_room_name).first()
+    if contact:
+        out.NickName = contact.NickName
+        out.Remark = contact.Remark
+    if chat_room and chat_room.UserNameList:
+        user_name_list = chat_room.UserNameList.split('^G')
+        stmt = (
+            select(micro_msg.Contact, micro_msg.ContactHeadImgUrl)
+            .join(micro_msg.ContactHeadImgUrl, micro_msg.Contact.UserName == micro_msg.ContactHeadImgUrl.usrName)
+            .where(micro_msg.Contact.UserName.in_(user_name_list))
+        )
+        results = db.execute(stmt).all()
+        out.ContactList = [
+            schemas.ContactWithHeadImg(
+                **contact.__dict__,
+                smallHeadImgUrl=contact_head_img_url.smallHeadImgUrl,
+                bigHeadImgUrl=contact_head_img_url.bigHeadImgUrl,
+                headImgMd5=contact_head_img_url.headImgMd5
+            )
+            for contact, contact_head_img_url in results
+        ]
+    return out
+
+
+@router.get("/head-image", response_model=ContactHeadImgUrlOut)
+async def get_head_image(usrName: str, db: Session = Depends(wx_db_micro_msg)):
+    return db.query(ContactHeadImgUrl).filter_by(usrName=usrName).first()
 

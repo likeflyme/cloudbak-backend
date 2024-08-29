@@ -19,4 +19,10 @@ class ChatRoom(BaseModel):
     Reserved6: Optional[str] = None
     Reserved7: Optional[int] = None
     Reserved8: Optional[str] = None
+
+    Remark: Optional[str] = None
+    NickName: Optional[str] = None
+
+    ContactList: Optional[list] = None
+
     
