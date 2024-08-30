@@ -7,7 +7,7 @@ import os
 import lz4.block as lb
 
 from app.dependencies.auth_dep import pwd_context
-from app.models.micro_msg import Contact
+from app.models.micro_msg import Contact, ContactHeadImgUrl
 from app.models.multi.media_msg import Media
 from app.models.multi.msg import Msg
 from app.models.proto import test_pb2, msg_bytes_extra_pb2
@@ -210,16 +210,18 @@ def decode_media(data):
     os.system(f"ffmpeg -y -f s16le -i {pcm_name} -ar 44100 -ac 1 {mp3_name}")
 
 
-# mediadb = os.path.join(app_settings.sys_dir, 'sessions\\1\\wxid_b125nd5rc59r12\\Msg\\Multi\\decoded_MediaMSG5.db')
-# session_local = get_session_local(mediadb)
-# db = session_local()
-# try:
-#     msg = db.query(Media).filter_by(Reserved0=2824614231503923834).first()
-#     print(msg)
-#     if msg:
-#         decode_media(msg.Buf)
-# finally:
-#     db.close()
+db_path = os.path.join(app_settings.sys_dir, 'sessions\\1\\wxid_b125nd5rc59r12\\Msg\\decoded_MicroMsg.db')
+session_local = get_session_local(db_path)
+db = session_local()
+try:
+    contact = db.query(Contact).filter_by(UserName='wxid_s5i50vlyxo9k21').first()
+    print(contact.UserName)
+    print(contact.head_img_url.smallHeadImgUrl)
 
-deserialize_vedio()
+    img = db.query(ContactHeadImgUrl).filter_by(usrName='25984985453207442@openim').first()
+    print(img)
+    print(img.contact)
+finally:
+    db.close()
+
 

@@ -37,9 +37,9 @@ def analyze(sys_session_id: int):
     logger.info("数据库解密完成")
 
     # 2. 头像提取
-    logger.info("头像提取")
-    save_header_images(sys_session)
-    logger.info("头像提取完成")
+    # logger.info("头像提取")
+    # save_header_images(sys_session)
+    # logger.info("头像提取完成")
 
     # 3. 图片解码
     # 图片路径

@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, LargeBinary, BLOB
+from sqlalchemy.orm import relationship
 
 from db.wx_db import Base
 
@@ -65,6 +66,12 @@ class Contact(Base):
     Reserved9 = Column(Integer)
     Reserved10 = Column(String)
 
+    # 外键关系
+    head_img_url = relationship('ContactHeadImgUrl',
+                                primaryjoin="Contact.UserName == foreign(ContactHeadImgUrl.usrName)",
+                                uselist=False,
+                                overlaps="contact")
+
 
 class ChatRoom(Base):
     __tablename__ = 'ChatRoom'
@@ -98,4 +105,8 @@ class ContactHeadImgUrl(Base):
     headImgMd5 = Column(String)
     reverse0 = Column(Integer)
     reverse1 = Column(String)
+
+    contact = relationship('Contact',
+                           primaryjoin="foreign(ContactHeadImgUrl.usrName) == Contact.UserName",
+                           overlaps="head_img_url")
 

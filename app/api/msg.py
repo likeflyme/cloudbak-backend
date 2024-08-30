@@ -137,6 +137,8 @@ def red_msgs(strUsrName: str,
             # 反序列化 ByteExtra 字段
             m = msgs.all()
             logger.info(f"数据量 {len(m)}")
+            personal_send = select_contact(micro_db, sys_session.wx_id)
+            personal_receive = select_contact(micro_db, strUsrName)
             # 数据转换
             for n in m:
                 nmsg = parse_msg.parse(n, sys_session.id, num)
@@ -144,22 +146,24 @@ def red_msgs(strUsrName: str,
                 # 群聊
                 if strUsrName.endswith("@chatroom"):
                     if nmsg.WxId:
-                        stmt = (
-                            select(micro_msg.Contact, micro_msg.ContactHeadImgUrl)
-                            .outerjoin(micro_msg.ContactHeadImgUrl,
-                                       micro_msg.Contact.UserName == micro_msg.ContactHeadImgUrl.usrName)
-                            .where(micro_msg.Contact.UserName == nmsg.WxId)
-                        )
-                        contact, img = micro_db.execute(stmt).first()
-                        if contact:
-                            nmsg.Remark = contact.Remark
-                            nmsg.NickName = contact.NickName
-                        if img:
-                            nmsg.smallHeadImgUrl = img.smallHeadImgUrl
-                            nmsg.bigHeadImgUrl = img.bigHeadImgUrl
-
-
-
+                        contact_data = select_contact(micro_db, nmsg.WxId)
+                        if contact_data:
+                            nmsg.Remark = contact_data.Remark
+                            nmsg.NickName = contact_data.NickName
+                            nmsg.smallHeadImgUrl = contact_data.smallHeadImgUrl
+                            nmsg.bigHeadImgUrl = contact_data.bigHeadImgUrl
+                # 私聊
+                else:
+                    if nmsg.IsSender == 1 and personal_send:
+                        nmsg.Remark = personal_send.Remark
+                        nmsg.NickName = personal_send.NickName
+                        nmsg.smallHeadImgUrl = personal_send.smallHeadImgUrl
+                        nmsg.bigHeadImgUrl = personal_send.bigHeadImgUrl
+                    elif nmsg.IsSender == 0 and personal_receive:
+                        nmsg.Remark = personal_receive.Remark
+                        nmsg.NickName = personal_receive.NickName
+                        nmsg.smallHeadImgUrl = personal_receive.smallHeadImgUrl
+                        nmsg.bigHeadImgUrl = personal_receive.bigHeadImgUrl
 
             if len(results) >= size:
                 if len(m) < size:
@@ -179,6 +183,31 @@ def red_msgs(strUsrName: str,
         "msgs": results
     }
     return data
+
+
+def select_contact(micro_db: Session, wxId: str):
+    contact = micro_db.query(Contact).filter_by(UserName=wxId).first()
+    if contact:
+        data = schemas.ContactWithHeadImg(**contact.__dict__)
+        if contact.head_img_url:
+            data.smallHeadImgUrl = contact.head_img_url.smallHeadImgUrl
+            data.bigHeadImgUrl = contact.head_img_url.bigHeadImgUrl
+        return data
+    img = micro_db.query(ContactHeadImgUrl).filter_by(usrName=wxId).first()
+    if img:
+        if img.contact:
+            data = schemas.ContactWithHeadImg(**img.contact.__dict__)
+            data.smallHeadImgUrl = img.smallHeadImgUrl
+            data.bigHeadImgUrl = img.bigHeadImgUrl
+        else:
+            data = schemas.ContactWithHeadImg(**img.__dict__)
+        return data
+
+def select_contact_with_img(micro_db, wxId):
+    contact = micro_db.execute(select(micro_msg.Contact).where(micro_msg.Contact.UserName == wxId)).first()
+    img = micro_db.execute(select(micro_msg.ContactHeadImgUrl).where(micro_msg.ContactHeadImgUrl.usrName == wxId)).first()
+    return contact, img
+
 
 
 @router.get("/contact", response_model=List[schemas.ContactBase])
@@ -322,6 +351,8 @@ async def get_video(video_path: str, session_id: int):
 @router.get("/chatroom-info", response_model=ChatRoomSchema)
 async def get_chatroom_info(chat_room_name: str, db: Session = Depends(wx_db_micro_msg)):
     chat_room = db.query(ChatRoom).filter_by(ChatRoomName=chat_room_name).first()
+    if not chat_room:
+        return None
     out = ChatRoomSchema(**chat_room.__dict__)
     contact = db.query(Contact).filter_by(UserName=chat_room_name).first()
     if contact:
