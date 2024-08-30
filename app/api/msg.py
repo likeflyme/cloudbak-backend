@@ -152,6 +152,12 @@ def red_msgs(strUsrName: str,
                             nmsg.NickName = contact_data.NickName
                             nmsg.smallHeadImgUrl = contact_data.smallHeadImgUrl
                             nmsg.bigHeadImgUrl = contact_data.bigHeadImgUrl
+                    else:
+                        if nmsg.IsSender == 1 and personal_send:
+                            nmsg.Remark = personal_send.Remark
+                            nmsg.NickName = personal_send.NickName
+                            nmsg.smallHeadImgUrl = personal_send.smallHeadImgUrl
+                            nmsg.bigHeadImgUrl = personal_send.bigHeadImgUrl
                 # 私聊
                 else:
                     if nmsg.IsSender == 1 and personal_send:
