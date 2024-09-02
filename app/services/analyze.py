@@ -9,6 +9,7 @@ from db.wx_db import clear_wx_db_cache
 from .decode_wx_pictures import decrypt_images
 from .save_head_images import save_header_images
 from ..helper.directory_helper import get_session_dir, get_wx_dir
+from app.models.sys import session_analyze_running, session_analyze_end
 
 
 def unzip(zip_path: str, extract_path: str):
@@ -27,28 +28,36 @@ def analyze(sys_session_id: int):
     """
     logger.info("执行 analyze 任务")
     db = SessionLocal()
+    sys_session = db.query(SysSession).filter_by(id=sys_session_id).first()
     try:
-        sys_session = db.query(SysSession).filter_by(id=sys_session_id).first()
+        sys_session.analyze_state = session_analyze_running
+        db.commit()
+
+        # 1. decode 数据库
+        logger.info("数据库文件解密")
+        decode_msg(sys_session)
+        logger.info("数据库解密完成")
+
+        # 2. 头像提取
+        # logger.info("头像提取")
+        # save_header_images(sys_session)
+        # logger.info("头像提取完成")
+
+        # 3. 图片解码
+        # 图片路径
+        # logger.info("图片解码")
+        # decrypt_images(sys_session)
+        # logger.info("图片解码完成")
+
+        # 4. 语音文件解码
+
     finally:
+        try:
+            sys_session.analyze_state = session_analyze_end
+            db.commit()
+        except Exception as e:
+            logger.error(e)
         db.close()
-    # 1. decode 数据库
-    logger.info("数据库文件解密")
-    decode_msg(sys_session)
-    logger.info("数据库解密完成")
-
-    # 2. 头像提取
-    # logger.info("头像提取")
-    # save_header_images(sys_session)
-    # logger.info("头像提取完成")
-
-    # 3. 图片解码
-    # 图片路径
-    # logger.info("图片解码")
-    # decrypt_images(sys_session)
-    # logger.info("图片解码完成")
-
-    # 4. 语音文件解码
-
     # 清除微信数据库链接缓存
     logger.info("清除缓存数据库连接")
     clear_wx_db_cache()

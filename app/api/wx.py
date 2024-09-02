@@ -1,6 +1,7 @@
 import os
 import shutil
 import time
+import tempfile
 from pathlib import Path
 from typing import Optional, List
 
@@ -91,9 +92,3 @@ def de_decrypt(sys_session_id: int,
     task_obj = TaskObj(1, "数据解析任务", analyze, sys_session_id)
     background_tasks.add_task(task_execute, task_obj)
     return sys_session
-
-
-@router.get("/save-head-images/")
-def save_head_images():
-    wx_dir = "D:\\wxdec\\wx\\jianghu\\wxid_b125nd5rc59r12"
-    save_header_images(wx_dir, 'jianghu', 'wxid_b125nd5rc59r12')

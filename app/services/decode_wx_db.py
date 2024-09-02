@@ -2,6 +2,7 @@ import ctypes
 import hashlib
 import hmac
 import os
+import re
 from pathlib import Path
 
 from Crypto.Cipher import AES
@@ -17,6 +18,16 @@ KEY_SIZE = 32
 DEFAULT_PAGESIZE = 4096
 DEFAULT_ITER = 64000
 
+patterns = [
+    r'^MicroMsg.db$',
+    r'^Misc.db$',
+    r'^HardLinkImage.db$',
+    r'^MediaMSG\d+.db$',
+    r'^MSG\d+.db$'
+]
+
+compiled_patterns = [re.compile(pattern) for pattern in patterns]
+
 
 def decode_msg(sys_session: SysSession):
     wx_dir = get_wx_dir(sys_session)
@@ -29,10 +40,12 @@ def decode_msg(sys_session: SysSession):
     # 遍历
     for dirpath, dirnames, filenames in os.walk(msg_dir):
         for filename in filenames:
-            if filename.endswith('.db') and not filename.startswith('decoded_'):
-                db_file = os.path.join(dirpath, filename)
-                # 解密，解密的文件为原文件名加 decoded_ 前缀
-                decode_one(db_file, password)
+            for pattern in compiled_patterns:
+                if pattern.match(filename):
+                    db_file = os.path.join(dirpath, filename)
+                    # 解密，解密的文件为原文件名加 decoded_ 前缀
+                    decode_one(db_file, password)
+                    break
 
 
 def decode_one(input_file, password):

@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     sys_db_dir: str = 'db/'
     sys_db_file_name: str = 'app.db'
     head_mapping: str = '/head'
+    tmp_dir: str = 'tmp'
     head_dir: str = 'head'
     log_dir: str = 'logs'
     log_file_name: str = 'app.log'

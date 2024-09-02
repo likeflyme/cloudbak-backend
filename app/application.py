@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -15,6 +16,11 @@ from config.app_config import settings
 
 
 def create_app() -> FastAPI:
+    # 上传大文件缓存目录
+    tempfile.tempdir = os.path.join(settings.sys_dir, settings.tmp_dir)
+    if not os.path.exists(tempfile.tempdir):
+        os.makedirs(tempfile.tempdir)
+
     # 创建数据库与所有系统表
     Base.metadata.create_all(bind=engine)
 
