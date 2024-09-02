@@ -3,23 +3,68 @@ import re
 import subprocess
 import pilk
 import os
+import array
 
 import lz4.block as lb
 
+from collections import defaultdict
 from app.dependencies.auth_dep import pwd_context
 from app.models.micro_msg import Contact, ContactHeadImgUrl
 from app.models.multi.media_msg import Media
-from app.models.multi.msg import Msg
 from app.models.proto import test_pb2, msg_bytes_extra_pb2
-from app.models.sys import SysUser
+from app.models.sys import SysUser, SysSession
 from config.app_config import settings as app_settings
 from db.sys_db import SessionLocal
-from db.wx_db import get_session_local
+from db.wx_db import get_session_local, msg_db_count, wx_db_msg
+from config.log_config import logger
+from app.models.multi.msg import Msg
+from sqlalchemy import select, and_
 
 msg0_db_path = os.path.join(app_settings.sys_dir, 'sessions\\1\\wxid_b125nd5rc59r12\\Msg\\Multi\\decoded_MSG6.db')
 
 
+session_msg_sort = defaultdict(lambda: None)
 
+
+def get_sorted_db(sys_session_id: int):
+    sorted_array = session_msg_sort[sys_session_id]
+    if sorted_array:
+        return sorted_array
+    sys_db = SessionLocal()
+    try:
+
+        sys_session = sys_db.query(SysSession).filter_by(id=sys_session_id).one()
+        # 查询数据库数量
+        count = msg_db_count(sys_session)
+        logger.info(f"数据库最大值 {count}")
+        sorted_array = array.array('i', [0] * count)
+        key_value_array = [{} for _ in range(count)]
+        # 查询库中消息的最大时间
+        for num in range(count - 1, -1, -1):
+            logger.info(f"查询库 {num}")
+            wx_session_local = wx_db_msg(num, sys_session)
+            wx_db = wx_session_local()
+            try:
+                msg = wx_db.query(Msg).order_by(Msg.CreateTime.desc(), Msg.Sequence.desc()).first()
+                key_value_array[num] = {
+                    "num": num,
+                    "create_time": msg.CreateTime
+                }
+            finally:
+                wx_db.close()
+        # 排序
+        key_value_array.sort(key=lambda x: x["create_time"])
+        for n in range(len(sorted_array)):
+            sorted_array[n] = key_value_array[n]["num"]
+        return sorted_array
+    finally:
+        sys_db.close()
+
+
+arr = get_sorted_db(1)
+
+for i in range(len(arr)):
+    print(f"sequnce={i}, db_no={arr[i]}")
 
 
 def create_user():
@@ -209,19 +254,5 @@ def decode_media(data):
     # pcm 转 mp3
     os.system(f"ffmpeg -y -f s16le -i {pcm_name} -ar 44100 -ac 1 {mp3_name}")
 
-
-db_path = os.path.join(app_settings.sys_dir, 'sessions\\1\\wxid_b125nd5rc59r12\\Msg\\decoded_MicroMsg.db')
-session_local = get_session_local(db_path)
-db = session_local()
-try:
-    contact = db.query(Contact).filter_by(UserName='wxid_s5i50vlyxo9k21').first()
-    print(contact.UserName)
-    print(contact.head_img_url.smallHeadImgUrl)
-
-    img = db.query(ContactHeadImgUrl).filter_by(usrName='25984985453207442@openim').first()
-    print(img)
-    print(img.contact)
-finally:
-    db.close()
 
 
