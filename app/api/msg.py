@@ -23,6 +23,7 @@ from app.services.decode_wx_pictures import decrypt_file
 from config.log_config import logger
 from db.sys_db import get_db
 from db.wx_db import wx_db_micro_msg, wx_db_msg, msg_db_count, wx_db_media_msg
+from app.services.db_order import get_sorted_db
 
 session_local_dict = defaultdict(lambda: None)
 
@@ -31,21 +32,23 @@ router = APIRouter(
 )
 
 
-@router.get("/session", response_model=schemas.SessionBaseOut)
+@router.get("/session", response_model=Optional[schemas.SessionBaseOut])
 def red_session(strUsrName: str, db: Session = Depends(wx_db_micro_msg)):
     stmt = (
         select(micro_msg.Session, micro_msg.ContactHeadImgUrl)
         .join(micro_msg.ContactHeadImgUrl, micro_msg.Session.strUsrName == micro_msg.ContactHeadImgUrl.usrName)
         .where(micro_msg.Session.strUsrName == strUsrName)
     )
-    print(stmt)
-    session, img = db.execute(stmt).one()
-    return schemas.SessionBaseOut(
+    result = db.execute(stmt).first()
+    if result:
+        session, img = result
+        return schemas.SessionBaseOut(
             **session.__dict__,
             smallHeadImgUrl=img.smallHeadImgUrl,
             bigHeadImgUrl=img.bigHeadImgUrl,
             headImgMd5=img.headImgMd5
         )
+    return None
 
 
 @router.get("/sessions", response_model=List[schemas.SessionBaseOut])
@@ -78,7 +81,7 @@ def red_sessions(page: int = 1, size: int = 20, db: Session = Depends(wx_db_micr
     ]
 
 
-@router.get("/msg_by_svr_id", response_model=schemas.MsgWithExtra)
+@router.get("/msg_by_svr_id", response_model=Optional[schemas.MsgWithExtra])
 def red_msg_by_svr_id(svr_id: int,
                       db_no: int,
                       sys_session: SysSession = Depends(get_current_sys_session)):
@@ -111,22 +114,24 @@ def red_msgs(strUsrName: str,
     """
     logger.info(f'strUsrName: {strUsrName}')
     current_db_no = 0
+    db_array = get_sorted_db(sys_session)
     if dbNo == -1:
-        dbNo = msg_db_count(sys_session) - 1
+        dbNo = len(db_array) - 1
         logger.info(f"数据库最大值 {dbNo}")
 
     results = []
     # 跨库查询
     for num in range(dbNo, -1, -1):
-        logger.info(f"查询库 {num}")
-        session_local = wx_db_msg(num, sys_session)
+        db_sequence = db_array[num]
+        logger.info(f"查询库 {db_sequence}")
+        session_local = wx_db_msg(db_sequence, sys_session)
         db = session_local()
         logger.info(f"已查询的数据量 {len(results)}")
         query_size = size - len(results)
         logger.info(f"查询量 {query_size}")
         logger.info(f"起始偏移 {start}")
         current_db_no = num
-        logger.info(f"当前库 {current_db_no}")
+        logger.info(f"当前库索引 {current_db_no}")
         try:
             # 再根据id查询消息列表
             msgs = (db.query(msg.Msg)
@@ -354,7 +359,7 @@ async def get_video(video_path: str, session_id: int):
     return FileResponse(file_path, media_type="video/mp4")
 
 
-@router.get("/chatroom-info", response_model=ChatRoomSchema)
+@router.get("/chatroom-info", response_model=Optional[ChatRoomSchema])
 async def get_chatroom_info(chat_room_name: str, db: Session = Depends(wx_db_micro_msg)):
     chat_room = db.query(ChatRoom).filter_by(ChatRoomName=chat_room_name).first()
     if not chat_room:
