@@ -10,7 +10,8 @@ session_msg_sort = defaultdict(lambda: None)
 
 
 def clear_session_msg_sort(sys_session_id):
-    del session_msg_sort[sys_session_id]
+    if sys_session_id in session_msg_sort:
+        del session_msg_sort[sys_session_id]
 
 
 def get_sorted_db(sys_session: SysSession):
