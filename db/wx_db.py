@@ -19,10 +19,35 @@ Base = declarative_base()
 
 # 保存 session local
 session_local_dict = defaultdict(lambda: None)
+# 保存 engine
+engine_dict = defaultdict(lambda: None)
 
 
 def clear_wx_db_cache():
     session_local_dict.clear()
+
+
+def clear_session_db_cache(session_dir):
+    logger.info(f"清除微信db连接缓存: {session_dir}")
+    try:
+        keys_to_delete = []  # 需要删除的 keys
+        for key in engine_dict.keys():
+            abs_file_path = os.path.abspath(key)
+            abs_base_dir = os.path.abspath(session_dir)
+            if abs_file_path.startswith(abs_base_dir):
+                engine = engine_dict[key]
+                if engine:
+                    # 关闭所有连接
+                    logger.info(f"engin关闭所有连接：{key}")
+                    engine.dispose()
+        # 删除缓存字典中的数据
+        for key in keys_to_delete:
+            del engine_dict[key]
+            del session_local_dict[key]
+            logger.info(f"已删除缓存中的连接和会话：{key}")
+    except Exception as e:
+        logger.info("关闭连接异常")
+        logger.error(e)
 
 
 def get_session_local(db_path):
@@ -35,6 +60,7 @@ def get_session_local(db_path):
         engine = create_engine(
             f"sqlite:///{db_path}", connect_args={"check_same_thread": False}
         )
+        engine_dict[db_path] = engine
         session_local_dict[db_path] = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     return session_local_dict[db_path]
 

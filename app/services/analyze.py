@@ -6,7 +6,7 @@ from app.services.decode_wx_db import decode_msg
 from config.log_config import logger
 from db.sys_db import SessionLocal
 from db.wx_db import clear_wx_db_cache
-from .db_order import clear_session_msg_sort
+from .db_order import clear_session_msg_sort, get_sorted_db
 from .decode_wx_pictures import decrypt_images
 from .save_head_images import save_header_images
 from ..helper.directory_helper import get_session_dir, get_wx_dir
@@ -64,4 +64,3 @@ def analyze(sys_session_id: int):
     clear_wx_db_cache()
     logger.info("清除session消息库排序缓存")
     clear_session_msg_sort(sys_session_id)
-

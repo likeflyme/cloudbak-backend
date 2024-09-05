@@ -35,18 +35,20 @@ router = APIRouter(
 @router.get("/session", response_model=Optional[schemas.SessionBaseOut])
 def red_session(strUsrName: str, db: Session = Depends(wx_db_micro_msg)):
     stmt = (
-        select(micro_msg.Session, micro_msg.ContactHeadImgUrl)
-        .join(micro_msg.ContactHeadImgUrl, micro_msg.Session.strUsrName == micro_msg.ContactHeadImgUrl.usrName)
+        select(micro_msg.Session, micro_msg.ContactHeadImgUrl, micro_msg.Contact)
+        .join(micro_msg.ContactHeadImgUrl, micro_msg.Session.strUsrName == micro_msg.ContactHeadImgUrl.usrName, isouter=True)
+        .join(micro_msg.Contact, micro_msg.Session.strUsrName == micro_msg.Contact.UserName, isouter=True)
         .where(micro_msg.Session.strUsrName == strUsrName)
     )
     result = db.execute(stmt).first()
     if result:
-        session, img = result
+        session, img, contact = result
         return schemas.SessionBaseOut(
             **session.__dict__,
-            smallHeadImgUrl=img.smallHeadImgUrl,
-            bigHeadImgUrl=img.bigHeadImgUrl,
-            headImgMd5=img.headImgMd5
+            smallHeadImgUrl=getattr(img, 'smallHeadImgUrl', None),
+            bigHeadImgUrl=getattr(img, 'bigHeadImgUrl', None),
+            headImgMd5=getattr(img, 'headImgMd5', None),
+            Remark=getattr(contact, 'Remark', None)
         )
     return None
 
@@ -61,8 +63,9 @@ def red_sessions(page: int = 1, size: int = 20, db: Session = Depends(wx_db_micr
     :return:
     """
     stmt = (
-        select(micro_msg.Session, micro_msg.ContactHeadImgUrl)
-        .join(micro_msg.ContactHeadImgUrl, micro_msg.Session.strUsrName == micro_msg.ContactHeadImgUrl.usrName)
+        select(micro_msg.Session, micro_msg.ContactHeadImgUrl, micro_msg.Contact)
+        .join(micro_msg.ContactHeadImgUrl, micro_msg.Session.strUsrName == micro_msg.ContactHeadImgUrl.usrName, isouter=True)
+        .join(micro_msg.Contact, micro_msg.Session.strUsrName == micro_msg.Contact.UserName, isouter=True)
         .where(micro_msg.Session.strUsrName.notlike("gh_%"))
         .where(micro_msg.Session.strUsrName.notlike("@%"))
         .order_by(micro_msg.Session.nOrder.desc())
@@ -73,11 +76,12 @@ def red_sessions(page: int = 1, size: int = 20, db: Session = Depends(wx_db_micr
     return [
         schemas.SessionBaseOut(
             **session.__dict__,
-            smallHeadImgUrl=contact_head_img_url.smallHeadImgUrl,
-            bigHeadImgUrl=contact_head_img_url.bigHeadImgUrl,
-            headImgMd5=contact_head_img_url.headImgMd5
+            smallHeadImgUrl=getattr(img, 'smallHeadImgUrl', None),
+            bigHeadImgUrl=getattr(img, 'bigHeadImgUrl', None),
+            headImgMd5=getattr(img, 'headImgMd5', None),
+            Remark=getattr(contact, 'Remark', None)
         )
-        for session, contact_head_img_url in results
+        for session, img, contact in results
     ]
 
 
@@ -214,11 +218,11 @@ def select_contact(micro_db: Session, wxId: str):
             data = schemas.ContactWithHeadImg(**img.__dict__)
         return data
 
+
 def select_contact_with_img(micro_db, wxId):
     contact = micro_db.execute(select(micro_msg.Contact).where(micro_msg.Contact.UserName == wxId)).first()
     img = micro_db.execute(select(micro_msg.ContactHeadImgUrl).where(micro_msg.ContactHeadImgUrl.usrName == wxId)).first()
     return contact, img
-
 
 
 @router.get("/contact", response_model=List[schemas.ContactBase])

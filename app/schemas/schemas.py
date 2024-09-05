@@ -51,6 +51,7 @@ class ChatMsg(BaseModel):
 class SessionBaseOut(BaseModel):
     strUsrName: str
     strNickName: str
+    Remark: Optional[str] = None
     strContent: Optional[str] = None
     nTime: Optional[int] = None
     smallHeadImgUrl: Optional[str] = None

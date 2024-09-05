@@ -82,6 +82,7 @@ async def upload_zip(
 def de_decrypt(sys_session_id: int,
                background_tasks: BackgroundTasks,
                update_time: int = int(time.time()),
+               sys_user: User = Depends(get_current_user),
                db: Session = Depends(get_db)):
     sys_session = db.query(SysSession).filter_by(id=sys_session_id).first()
     sys_session.update_time = update_time
@@ -89,6 +90,6 @@ def de_decrypt(sys_session_id: int,
     db.refresh(sys_session)
     logger.info("设置同步时间：")
     logger.info("解析任务")
-    task_obj = TaskObj(1, "数据解析任务", analyze, sys_session_id)
+    task_obj = TaskObj(sys_user.id, "数据解析任务", analyze, sys_session_id)
     background_tasks.add_task(task_execute, task_obj)
     return sys_session

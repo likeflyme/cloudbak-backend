@@ -1,11 +1,13 @@
 from typing import List
 
-from fastapi import Depends, APIRouter, HTTPException, status
+from fastapi import Depends, APIRouter, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth_dep import get_current_user, pwd_context
 from app.models.sys import SysUser, SysSession
 from app.schemas.sys_schemas import SysSessionSchemaWithId, SysSessionIn, SysSessionOut, UserCreate
+from app.services.clear_session import clear_session
+from app.services.sys_task_maker import TaskObj, task_execute
 from config.log_config import logger
 from db.sys_db import get_db
 
@@ -77,4 +79,24 @@ def create_session(
         user.current_session_id = sys_session.id
         db.commit()
     return sys_session
+
+
+@router.delete("/sys-session/{sys_session_id}")
+def delete_session(sys_session_id: int,
+                    background_tasks: BackgroundTasks,
+                   user: SysUser = Depends(get_current_user),
+                   db: Session = Depends(get_db)):
+    sys_session = db.query(SysSession).filter_by(id=sys_session_id).first()
+    db.delete(sys_session)
+    db.commit()
+
+    sys_user = db.query(SysUser).filter_by(id=user.id).first()
+    if sys_user is not None and sys_user.current_session_id == sys_session.id:
+        first_session = db.query(SysSession).first()
+        if first_session is not None:
+            sys_user.current_session_id = first_session.id
+            db.commit()
+    # 异步执行清除硬盘数据
+    task_obj = TaskObj(sys_user.id, "清除session数据", clear_session, sys_session)
+    background_tasks.add_task(task_execute, task_obj)
 
