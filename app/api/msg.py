@@ -68,6 +68,10 @@ def red_sessions(page: int = 1, size: int = 20, db: Session = Depends(wx_db_micr
         .join(micro_msg.Contact, micro_msg.Session.strUsrName == micro_msg.Contact.UserName, isouter=True)
         .where(micro_msg.Session.strUsrName.notlike("gh_%"))
         .where(micro_msg.Session.strUsrName.notlike("@%"))
+        .where(micro_msg.Session.strUsrName.notlike("%@openim"))
+        .where(micro_msg.Session.strUsrName != "notifymessage")
+        .where(micro_msg.Session.strUsrName != "fmessage")
+        .where(micro_msg.Session.strUsrName != "qqmail")
         .order_by(micro_msg.Session.nOrder.desc())
         .offset((page - 1) * size)
         .limit(size)
@@ -363,6 +367,11 @@ async def get_video(video_path: str, session_id: int):
     return FileResponse(file_path, media_type="video/mp4")
 
 
+@router.get("/chatroom", response_model=Optional[ChatRoomSchema])
+async def get_chatroom_info(chat_room_name: str, db: Session = Depends(wx_db_micro_msg)):
+    return db.query(ChatRoom).filter_by(ChatRoomName=chat_room_name).one()
+
+
 @router.get("/chatroom-info", response_model=Optional[ChatRoomSchema])
 async def get_chatroom_info(chat_room_name: str, db: Session = Depends(wx_db_micro_msg)):
     chat_room = db.query(ChatRoom).filter_by(ChatRoomName=chat_room_name).first()
@@ -393,7 +402,7 @@ async def get_chatroom_info(chat_room_name: str, db: Session = Depends(wx_db_mic
     return out
 
 
-@router.get("/head-image", response_model=ContactHeadImgUrlOut)
+@router.get("/head-image", response_model=Optional[ContactHeadImgUrlOut])
 async def get_head_image(usrName: str, db: Session = Depends(wx_db_micro_msg)):
     return db.query(ContactHeadImgUrl).filter_by(usrName=usrName).first()
 

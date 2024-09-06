@@ -13,7 +13,7 @@ from app.helper.directory_helper import get_session_dir, get_wx_dir, get_wx_dir_
 from app.models.sys import SysSession
 from app.schemas.sys_schemas import User, CreateSysSessionSchema, SysSessionSchema, SysSessionOut
 from app.services.analyze import analyze
-from app.services.save_head_images import save_header_images
+from app.services.save_head_images import save_header_images, analyze_head_images
 from app.services.sys_task_maker import TaskObj, task_execute
 from config.log_config import logger
 from db.sys_db import get_db
