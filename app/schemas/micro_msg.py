@@ -25,4 +25,6 @@ class ChatRoom(BaseModel):
 
     ContactList: Optional[list] = None
 
+    ChatRoomMembers: Optional[list] = None
+
     

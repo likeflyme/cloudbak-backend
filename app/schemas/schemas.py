@@ -117,6 +117,7 @@ class ContactBase(BaseModel):
     PYInitial: Optional[str] = None
     QuanPin: Optional[str] = None
     RemarkPYInitial: Optional[str] = None
+    ChatRoomName: Optional[str] = None
 
 
 class ContactWithHeadImg(ContactBase):

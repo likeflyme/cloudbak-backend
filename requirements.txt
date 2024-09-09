@@ -12,6 +12,6 @@ cachetools==5.3.3
 passlib==1.7.4
 bcrypt==3.2.0
 pytest==8.2.2
-protobuf==5.27.2
+protobuf==5.28.0-rc2
 lz4==4.3.3
 xmltodict==0.13.0

@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, union
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth_dep import get_current_sys_session
@@ -13,6 +13,7 @@ from app.models import micro_msg
 from app.models.micro_msg import Contact, ChatRoom, ContactHeadImgUrl
 from app.models.multi import msg
 from app.models.multi.media_msg import Media
+from app.models.proto import cr_extra_buf_pb2
 from app.models.sys import SysSession
 from app.schemas import schemas
 from app.schemas.micro_msg import ChatRoom as ChatRoomSchema
@@ -369,7 +370,19 @@ async def get_video(video_path: str, session_id: int):
 
 @router.get("/chatroom", response_model=Optional[ChatRoomSchema])
 async def get_chatroom_info(chat_room_name: str, db: Session = Depends(wx_db_micro_msg)):
-    return db.query(ChatRoom).filter_by(ChatRoomName=chat_room_name).one()
+    chat_room = db.query(ChatRoom).filter_by(ChatRoomName=chat_room_name).one()
+    out = ChatRoomSchema(**chat_room.__dict__)
+    if chat_room.RoomData:
+        room_data = cr_extra_buf_pb2.RoomData()
+        room_data.ParseFromString(chat_room.RoomData)
+        out.ChatRoomMembers = []
+        for u in room_data.users:
+            if u.name and u.name.strip():
+                out.ChatRoomMembers.append({
+                    "userName": u.id,
+                    "remark": u.name
+                })
+    return out
 
 
 @router.get("/chatroom-info", response_model=Optional[ChatRoomSchema])
@@ -384,21 +397,64 @@ async def get_chatroom_info(chat_room_name: str, db: Session = Depends(wx_db_mic
         out.Remark = contact.Remark
     if chat_room and chat_room.UserNameList:
         user_name_list = chat_room.UserNameList.split('^G')
-        stmt = (
-            select(micro_msg.Contact, micro_msg.ContactHeadImgUrl)
-            .join(micro_msg.ContactHeadImgUrl, micro_msg.Contact.UserName == micro_msg.ContactHeadImgUrl.usrName)
+        # 查询Contact左表为主，outerjoin右表
+        contact_query = (
+            select(
+                micro_msg.Contact.UserName,
+                micro_msg.Contact.NickName,
+                micro_msg.Contact.Remark,
+                micro_msg.ContactHeadImgUrl.smallHeadImgUrl,
+                micro_msg.ContactHeadImgUrl.bigHeadImgUrl,
+                micro_msg.ContactHeadImgUrl.headImgMd5
+            )
+            .outerjoin(
+                micro_msg.ContactHeadImgUrl,
+                micro_msg.Contact.UserName == micro_msg.ContactHeadImgUrl.usrName
+            )
             .where(micro_msg.Contact.UserName.in_(user_name_list))
         )
+
+        # 查询ContactHeadImgUrl右表为主，outerjoin左表
+        contact_img_query = (
+            select(
+                micro_msg.Contact.UserName,
+                micro_msg.Contact.NickName,
+                micro_msg.Contact.Remark,
+                micro_msg.ContactHeadImgUrl.smallHeadImgUrl,
+                micro_msg.ContactHeadImgUrl.bigHeadImgUrl,
+                micro_msg.ContactHeadImgUrl.headImgMd5
+            )
+            .outerjoin(
+                micro_msg.Contact,
+                micro_msg.ContactHeadImgUrl.usrName == micro_msg.Contact.UserName
+            )
+            .where(micro_msg.ContactHeadImgUrl.usrName.in_(user_name_list))
+        )
+
+        # 使用union合并两者的查询结果，自动去重
+        stmt = union(contact_query, contact_img_query)
         results = db.execute(stmt).all()
         out.ContactList = [
             schemas.ContactWithHeadImg(
-                **contact.__dict__,
-                smallHeadImgUrl=contact_head_img_url.smallHeadImgUrl,
-                bigHeadImgUrl=contact_head_img_url.bigHeadImgUrl,
-                headImgMd5=contact_head_img_url.headImgMd5
+                UserName=user_name,
+                NickName=nick_name,
+                Remark=remark,
+                smallHeadImgUrl=small_head_img_url,
+                bigHeadImgUrl=big_head_img_url,
+                headImgMd5=head_img_md5
             )
-            for contact, contact_head_img_url in results
+            for user_name, nick_name, remark, small_head_img_url, big_head_img_url, head_img_md5 in results
         ]
+    if chat_room.RoomData:
+        room_data = cr_extra_buf_pb2.RoomData()
+        room_data.ParseFromString(chat_room.RoomData)
+        out.ChatRoomMembers = []
+        for u in room_data.users:
+            if u.name and u.name.strip():
+                out.ChatRoomMembers.append({
+                    "userName": u.id,
+                    "remark": u.name
+                })
     return out
 
 

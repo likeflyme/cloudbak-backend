@@ -1,6 +1,8 @@
 import os.path
 import re
 import subprocess
+
+import google
 import pilk
 import os
 import array
@@ -9,9 +11,9 @@ import lz4.block as lb
 
 from collections import defaultdict
 from app.dependencies.auth_dep import pwd_context
-from app.models.micro_msg import Contact, ContactHeadImgUrl
+from app.models.micro_msg import Contact, ContactHeadImgUrl, ChatRoom
 from app.models.multi.media_msg import Media
-from app.models.proto import test_pb2, msg_bytes_extra_pb2
+from app.models.proto import test_pb2, msg_bytes_extra_pb2, cr_extra_buf_pb2
 from app.models.sys import SysUser, SysSession
 from app.services.save_head_images import save_header_images
 from config.app_config import settings as app_settings
@@ -180,7 +182,22 @@ def decode_media(data):
     os.system(f"ffmpeg -y -f s16le -i {pcm_name} -ar 44100 -ac 1 {mp3_name}")
 
 
-db = SessionLocal()
+deserialize_vedio()
 
-sys_session = db.query(SysSession).filter_by(id=1).one()
-save_header_images(sys_session)
+db_path = os.path.join(app_settings.sys_dir, 'sessions\\1\\wxid_b125nd5rc59r12\\Msg\\decoded_MicroMsg.db')
+db_session = get_session_local(db_path)
+db = db_session()
+try:
+    # chat_room = db.query(ChatRoom).filter_by(ChatRoomName='25653324325@chatroom').one()
+    chat_room = db.query(ChatRoom).filter_by(ChatRoomName='48298073064@chatroom').one()
+    print("原数据------------------------")
+    print(chat_room.RoomData)
+    print("判断格式----------------------")
+    print(decode_protobuf(chat_room.RoomData))
+    room_data = cr_extra_buf_pb2.RoomData()
+    room_data.ParseFromString(chat_room.RoomData)
+    for u in room_data.users:
+        print(f"id: {u.id}, nickname: {u.name}")
+finally:
+    db.close()
+
