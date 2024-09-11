@@ -70,7 +70,6 @@ class SysSessionSchema(BaseModel):
     wx_id: str | None = None
     wx_name: str | None = None
     wx_acct_name: str | None = None
-    wx_key: str | None = None
     wx_mobile: str | None = None
     wx_email: str | None = None
     wx_dir: str | None = None
@@ -89,7 +88,6 @@ class SysSessionOut(BaseModel):
     wx_id: str | None = None
     wx_name: str | None = None
     wx_acct_name: str | None = None
-    wx_key: str | None = None
     wx_mobile: str | None = None
     wx_email: str | None = None
     wx_dir: str | None = None

@@ -182,22 +182,4 @@ def decode_media(data):
     os.system(f"ffmpeg -y -f s16le -i {pcm_name} -ar 44100 -ac 1 {mp3_name}")
 
 
-deserialize_vedio()
-
-db_path = os.path.join(app_settings.sys_dir, 'sessions\\1\\wxid_b125nd5rc59r12\\Msg\\decoded_MicroMsg.db')
-db_session = get_session_local(db_path)
-db = db_session()
-try:
-    # chat_room = db.query(ChatRoom).filter_by(ChatRoomName='25653324325@chatroom').one()
-    chat_room = db.query(ChatRoom).filter_by(ChatRoomName='48298073064@chatroom').one()
-    print("原数据------------------------")
-    print(chat_room.RoomData)
-    print("判断格式----------------------")
-    print(decode_protobuf(chat_room.RoomData))
-    room_data = cr_extra_buf_pb2.RoomData()
-    room_data.ParseFromString(chat_room.RoomData)
-    for u in room_data.users:
-        print(f"id: {u.id}, nickname: {u.name}")
-finally:
-    db.close()
 
