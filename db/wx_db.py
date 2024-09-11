@@ -2,9 +2,10 @@ import os
 import re
 from collections import defaultdict
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from starlette import status
 
 from app.dependencies.auth_dep import get_current_wx_id, get_current_sys_session
 from app.helper.directory_helper import get_wx_dir
@@ -118,6 +119,11 @@ def wx_db_micro_msg(curren_session: SysSession = Depends(get_current_sys_session
     """
     db_path = os.path.join(get_wx_dir(curren_session), wx_settings.db_micro_msg)
     logger.info("DB: %s", db_path)
+    if not os.path.exists(db_path):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="库文件不存在:" + db_path
+        )
     SessionLocal = get_session_local(db_path)
     my_db = SessionLocal()
     try:

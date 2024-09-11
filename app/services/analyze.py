@@ -8,7 +8,7 @@ from db.sys_db import SessionLocal
 from db.wx_db import clear_wx_db_cache
 from .db_order import clear_session_msg_sort, get_sorted_db
 from .decode_wx_pictures import decrypt_images
-from .save_head_images import save_header_images
+from .save_head_images import save_header_images, analyze_head_images
 from ..helper.directory_helper import get_session_dir, get_wx_dir
 from app.models.sys import session_analyze_running, session_analyze_end
 
@@ -39,13 +39,7 @@ def analyze(sys_session_id: int):
         decode_msg(sys_session)
         logger.info("数据库解密完成")
 
-        # 2. 头像提取
-        # logger.info("头像提取")
-        # save_header_images(sys_session)
-        # logger.info("头像提取完成")
-
-        # 3. 图片解码
-        # 图片路径
+        # 2. 图片解码
         # logger.info("图片解码")
         # decrypt_images(sys_session)
         # logger.info("图片解码完成")
@@ -64,3 +58,13 @@ def analyze(sys_session_id: int):
     clear_wx_db_cache()
     logger.info("清除session消息库排序缓存")
     clear_session_msg_sort(sys_session_id)
+
+    # 头像提取
+    logger.info("头像提取")
+    try:
+        analyze_head_images(sys_session_id)
+        logger.info("头像提取完成")
+    except Exception as e:
+        logger.error("头像提取异常")
+        logger.error(e)
+

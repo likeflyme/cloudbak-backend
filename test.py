@@ -15,7 +15,7 @@ from app.models.micro_msg import Contact, ContactHeadImgUrl, ChatRoom
 from app.models.multi.media_msg import Media
 from app.models.proto import test_pb2, msg_bytes_extra_pb2, cr_extra_buf_pb2
 from app.models.sys import SysUser, SysSession
-from app.services.save_head_images import save_header_images
+from app.services.save_head_images import save_header_images, analyze_head_images
 from config.app_config import settings as app_settings
 from db.sys_db import SessionLocal
 from db.wx_db import get_session_local, msg_db_count, wx_db_msg
@@ -182,4 +182,5 @@ def decode_media(data):
     os.system(f"ffmpeg -y -f s16le -i {pcm_name} -ar 44100 -ac 1 {mp3_name}")
 
 
-
+sys_session_id = 8
+analyze_head_images(sys_session_id)
