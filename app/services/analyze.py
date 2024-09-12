@@ -34,10 +34,25 @@ def analyze(sys_session_id: int):
         sys_session.analyze_state = session_analyze_running
         db.commit()
 
+        # 清除微信数据库链接缓存
+        logger.info("清除缓存数据库连接")
+        clear_wx_db_cache()
+        logger.info("清除session消息库排序缓存")
+        clear_session_msg_sort(sys_session_id)
+
         # 1. decode 数据库
         logger.info("数据库文件解密")
         decode_msg(sys_session)
         logger.info("数据库解密完成")
+
+        # 头像提取
+        logger.info("头像提取")
+        try:
+            analyze_head_images(sys_session_id)
+            logger.info("头像提取完成")
+        except Exception as e:
+            logger.error("头像提取异常")
+            logger.error(e)
 
         # 2. 图片解码
         # logger.info("图片解码")
@@ -53,18 +68,3 @@ def analyze(sys_session_id: int):
         except Exception as e:
             logger.error(e)
         db.close()
-    # 清除微信数据库链接缓存
-    logger.info("清除缓存数据库连接")
-    clear_wx_db_cache()
-    logger.info("清除session消息库排序缓存")
-    clear_session_msg_sort(sys_session_id)
-
-    # 头像提取
-    logger.info("头像提取")
-    try:
-        analyze_head_images(sys_session_id)
-        logger.info("头像提取完成")
-    except Exception as e:
-        logger.error("头像提取异常")
-        logger.error(e)
-

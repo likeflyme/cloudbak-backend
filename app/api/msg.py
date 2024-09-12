@@ -1,5 +1,6 @@
 import os
 from collections import defaultdict
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.dependencies.auth_dep import get_current_sys_session
 from app.helper.directory_helper import get_session_dir, get_decoded_media_path
+from app.helper.filter_helper import convert_type
 from app.models import micro_msg
 from app.models.micro_msg import Contact, ChatRoom, ContactHeadImgUrl
 from app.models.multi import msg
@@ -37,7 +39,8 @@ router = APIRouter(
 def red_session(strUsrName: str, db: Session = Depends(wx_db_micro_msg)):
     stmt = (
         select(micro_msg.Session, micro_msg.ContactHeadImgUrl, micro_msg.Contact)
-        .join(micro_msg.ContactHeadImgUrl, micro_msg.Session.strUsrName == micro_msg.ContactHeadImgUrl.usrName, isouter=True)
+        .join(micro_msg.ContactHeadImgUrl, micro_msg.Session.strUsrName == micro_msg.ContactHeadImgUrl.usrName,
+              isouter=True)
         .join(micro_msg.Contact, micro_msg.Session.strUsrName == micro_msg.Contact.UserName, isouter=True)
         .where(micro_msg.Session.strUsrName == strUsrName)
     )
@@ -65,7 +68,8 @@ def red_sessions(page: int = 1, size: int = 20, db: Session = Depends(wx_db_micr
     """
     stmt = (
         select(micro_msg.Session, micro_msg.ContactHeadImgUrl, micro_msg.Contact)
-        .join(micro_msg.ContactHeadImgUrl, micro_msg.Session.strUsrName == micro_msg.ContactHeadImgUrl.usrName, isouter=True)
+        .join(micro_msg.ContactHeadImgUrl, micro_msg.Session.strUsrName == micro_msg.ContactHeadImgUrl.usrName,
+              isouter=True)
         .join(micro_msg.Contact, micro_msg.Session.strUsrName == micro_msg.Contact.UserName, isouter=True)
         .where(micro_msg.Session.strUsrName.notlike("gh_%"))
         .where(micro_msg.Session.strUsrName.notlike("@%"))
@@ -108,10 +112,18 @@ def red_msgs(strUsrName: str,
              size: int = 20,
              start: Optional[int] = 0,
              dbNo: Optional[int] = None,
+             filterType: Optional[int] = 0,
+             filterDay: Optional[str] = None,
+             filterUser: Optional[str] = None,
+             filterText: Optional[str] = None,
              micro_db: Session = Depends(wx_db_micro_msg),
              sys_session: SysSession = Depends(get_current_sys_session)):
     """
     分页查询用户分页消息
+    :param filterText:
+    :param filterUser: 群用户微信id
+    :param filterDay: yyyyMMdd
+    :param filterType:
     :param micro_db:
     :param strUsrName: 微信号
     :param page: 页码
@@ -143,18 +155,45 @@ def red_msgs(strUsrName: str,
         logger.info(f"当前库索引 {current_db_no}")
         try:
             # 再根据id查询消息列表
-            msgs = (db.query(msg.Msg)
-                    .filter_by(StrTalker=strUsrName)
+            stmt = (select(msg.Msg).where(msg.Msg.StrTalker == strUsrName)
                     .order_by(msg.Msg.CreateTime.desc(), msg.Msg.Sequence.desc())
                     .offset((page - 1) * size + start).limit(query_size))
-            logger.info(str(msgs.statement.compile(compile_kwargs={"literal_binds": True})))
+            # 添加查询条件
+            if filterType != 0:
+                # 按日期查询
+                if filterType == 7 and filterDay:
+                    # 将 yyyyMMdd 转换为 datetime 对象
+                    date = datetime.strptime(filterDay, "%Y%m%d")
+
+                    # 当天开始时间
+                    start_of_day = datetime(date.year, date.month, date.day)
+
+                    # 当天结束时间（23:59:59）
+                    end_of_day = start_of_day + timedelta(days=1) - timedelta(seconds=1)
+
+                    # 转换为时间戳（秒级）
+                    start_timestamp = int(start_of_day.timestamp())
+                    end_timestamp = int(end_of_day.timestamp())
+                    stmt = stmt.where(msg.Msg.CreateTime >= start_timestamp).where(msg.Msg.CreateTime <= end_timestamp)
+                else:
+                    type_list = convert_type(filterType)
+                    if type_list is None:
+                        logger.warn(f"query type is {filterType} but convert type and sub type not found")
+                    for t in type_list:
+                        stmt = stmt.where(msg.Msg.Type == t[0]).where(msg.Msg.SubType == t[1])
+            if filterText is not None:
+                if filterType == 0:
+                    stmt = stmt.where(msg.Msg.StrContent.contains(filterText))
+            logger.info(f"query sql: {stmt}")
             # 反序列化 ByteExtra 字段
-            m = msgs.all()
+            # m = msgs.all()
+            m = db.execute(stmt).all()
             logger.info(f"数据量 {len(m)}")
             personal_send = select_contact(micro_db, sys_session.wx_id)
             personal_receive = select_contact(micro_db, strUsrName)
             # 数据转换
-            for n in m:
+            for r in m:
+                n = r[0]
                 nmsg = parse_msg.parse(n, sys_session.id, num)
                 results.append(nmsg)
                 # 群聊
@@ -226,7 +265,8 @@ def select_contact(micro_db: Session, wxId: str):
 
 def select_contact_with_img(micro_db, wxId):
     contact = micro_db.execute(select(micro_msg.Contact).where(micro_msg.Contact.UserName == wxId)).first()
-    img = micro_db.execute(select(micro_msg.ContactHeadImgUrl).where(micro_msg.ContactHeadImgUrl.usrName == wxId)).first()
+    img = micro_db.execute(
+        select(micro_msg.ContactHeadImgUrl).where(micro_msg.ContactHeadImgUrl.usrName == wxId)).first()
     return contact, img
 
 
@@ -461,4 +501,3 @@ async def get_chatroom_info(chat_room_name: str, db: Session = Depends(wx_db_mic
 @router.get("/head-image", response_model=Optional[ContactHeadImgUrlOut])
 async def get_head_image(usrName: str, db: Session = Depends(wx_db_micro_msg)):
     return db.query(ContactHeadImgUrl).filter_by(usrName=usrName).first()
-
