@@ -54,17 +54,10 @@ def analyze(sys_session_id: int):
             logger.error("头像提取异常")
             logger.error(e)
 
-        # 2. 图片解码
-        # logger.info("图片解码")
-        # decrypt_images(sys_session)
-        # logger.info("图片解码完成")
-
-        # 4. 语音文件解码
-
+        # 修改状态为解析完成
+        sys_session.analyze_state = session_analyze_end
+        db.commit()
+    except Exception as e:
+        logger.error(e)
     finally:
-        try:
-            sys_session.analyze_state = session_analyze_end
-            db.commit()
-        except Exception as e:
-            logger.error(e)
         db.close()

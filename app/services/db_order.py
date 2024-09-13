@@ -49,3 +49,8 @@ def get_sorted_db(sys_session: SysSession):
     session_msg_sort[sys_session.id] = sorted_array
     logger.info(f"生成库排序缓存：{session_msg_sort[sys_session.id]}")
     return sorted_array
+
+
+def reversed_array(sys_session: SysSession):
+    sorted_array = get_sorted_db(sys_session)
+    return sorted_array.reverse()
