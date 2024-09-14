@@ -151,46 +151,15 @@ def red_msgs(strUsrName: str,
                     .order_by(msg.Msg.CreateTime.desc(), msg.Msg.Sequence.desc())
                     .offset((page - 1) * size + start).limit(query_size))
             logger.info(f"query sql: {stmt}")
-            m = db.execute(stmt).all()
-            logger.info(f"数据量 {len(m)}")
-            personal_send = select_contact(micro_db, sys_session.wx_id)
-            personal_receive = select_contact(micro_db, strUsrName)
+            msgs = db.execute(stmt).all()
+            logger.info(f"数据量 {len(msgs)}")
             # 数据转换
-            for r in m:
-                # 反序列化 ByteExtra 字段
-                nmsg = parse_msg.parse(r[0], sys_session.id, num)
-                # 群聊
-                if strUsrName.endswith("@chatroom"):
-                    if nmsg.WxId:
-                        contact_data = select_contact(micro_db, nmsg.WxId)
-                        if contact_data:
-                            nmsg.Remark = contact_data.Remark
-                            nmsg.NickName = contact_data.NickName
-                            nmsg.smallHeadImgUrl = contact_data.smallHeadImgUrl
-                            nmsg.bigHeadImgUrl = contact_data.bigHeadImgUrl
-                    else:
-                        if nmsg.IsSender == 1 and personal_send:
-                            nmsg.Remark = personal_send.Remark
-                            nmsg.NickName = personal_send.NickName
-                            nmsg.smallHeadImgUrl = personal_send.smallHeadImgUrl
-                            nmsg.bigHeadImgUrl = personal_send.bigHeadImgUrl
-                # 私聊
-                else:
-                    if nmsg.IsSender == 1 and personal_send:
-                        nmsg.Remark = personal_send.Remark
-                        nmsg.NickName = personal_send.NickName
-                        nmsg.smallHeadImgUrl = personal_send.smallHeadImgUrl
-                        nmsg.bigHeadImgUrl = personal_send.bigHeadImgUrl
-                    elif nmsg.IsSender == 0 and personal_receive:
-                        nmsg.Remark = personal_receive.Remark
-                        nmsg.NickName = personal_receive.NickName
-                        nmsg.smallHeadImgUrl = personal_receive.smallHeadImgUrl
-                        nmsg.bigHeadImgUrl = personal_receive.bigHeadImgUrl
-                results.append(nmsg)
-
+            msgs = parseMsg(msgs, micro_db, sys_session, strUsrName, num)
+            for m in msgs:
+                results.append(m)
             if len(results) >= size:
-                if len(m) < size:
-                    start = len(m)
+                if len(msgs) < size:
+                    start = len(msgs)
                     logger.info(f"查询结束，设置起始偏移为 {start}")
                 break
             # 修改起始偏移
@@ -297,58 +266,20 @@ def red_msgs_filter(strUsrName: str,
             stmt = stmt.order_by(msg.Msg.CreateTime.desc(), msg.Msg.Sequence.desc())
             if filterType == 7:
                 logger.info(f"query sql: {tm_stmt}")
-                m = db.execute(tm_stmt).all()
+                msgs = db.execute(tm_stmt).all()
             else:
                 logger.info(f"query sql: {stmt}")
-                m = db.execute(stmt).all()
-            logger.info(f"数据量 {len(m)}")
-            personal_send = select_contact(micro_db, sys_session.wx_id)
-            personal_receive = select_contact(micro_db, strUsrName)
+                msgs = db.execute(stmt).all()
+            logger.info(f"数据量 {len(msgs)}")
             # 数据转换
-            for r in m:
-                # 反序列化 ByteExtra 字段
-                nmsg = parse_msg.parse(r[0], sys_session.id, num)
-                results.append(nmsg)
-                # 群聊
-                if strUsrName.endswith("@chatroom"):
-                    if nmsg.WxId:
-                        contact_data = select_contact(micro_db, nmsg.WxId)
-                        if contact_data:
-                            nmsg.Remark = contact_data.Remark
-                            nmsg.NickName = contact_data.NickName
-                            nmsg.smallHeadImgUrl = contact_data.smallHeadImgUrl
-                            nmsg.bigHeadImgUrl = contact_data.bigHeadImgUrl
-                    else:
-                        if nmsg.IsSender == 1 and personal_send:
-                            nmsg.Remark = personal_send.Remark
-                            nmsg.NickName = personal_send.NickName
-                            nmsg.smallHeadImgUrl = personal_send.smallHeadImgUrl
-                            nmsg.bigHeadImgUrl = personal_send.bigHeadImgUrl
-                # 私聊
-                else:
-                    if nmsg.IsSender == 1 and personal_send:
-                        nmsg.Remark = personal_send.Remark
-                        nmsg.NickName = personal_send.NickName
-                        nmsg.smallHeadImgUrl = personal_send.smallHeadImgUrl
-                        nmsg.bigHeadImgUrl = personal_send.bigHeadImgUrl
-                    elif nmsg.IsSender == 0 and personal_receive:
-                        nmsg.Remark = personal_receive.Remark
-                        nmsg.NickName = personal_receive.NickName
-                        nmsg.smallHeadImgUrl = personal_receive.smallHeadImgUrl
-                        nmsg.bigHeadImgUrl = personal_receive.bigHeadImgUrl
-
+            msgs = parseMsg(msgs, micro_db, sys_session, strUsrName, num)
+            for m in msgs:
+                results.append(m)
             if len(results) >= size:
-                if len(m) < size:
-                    start = len(m)
+                if len(msgs) < size:
+                    start = len(msgs)
                     logger.info(f"查询结束，设置起始偏移为 {start}")
                 break
-            # 按时间查询，且查询的值不足限制大小
-            # if filterType == 7 and len(results) < size:
-            #     dbNo = dbNo + 1
-            #     db_array.insert(num, db_sequence)
-            #     logger.info(f"按日期查询且查询量不足一页，设置dbNo + 1，db_array 插入数据库多查一次")
-            #     logger.info(f"dbNo: {dbNo}")
-            #     logger.info(f"db_array: {db_array}")
             # 修改起始偏移
             start = 0
             # 重置页码
@@ -363,6 +294,132 @@ def red_msgs_filter(strUsrName: str,
     }
     return data
 
+
+@router.get("/msgs-by-local-id", response_model=ChatMsg)
+def red_msgs_by_local_id(strUsrName: str,
+             localId: int,
+             CreateTime: int,
+             Sequence: int,
+             page: int = 1,
+             size: int = 20,
+             start: Optional[int] = 0,
+             dbNo: Optional[int] = None,
+             filterMode: int = 0,
+             micro_db: Session = Depends(wx_db_micro_msg),
+             sys_session: SysSession = Depends(get_current_sys_session)):
+    """
+    分页查询用户分页消息
+    :param localId: 消息id
+    :param CreateTime:
+    :param Sequence:
+    :param micro_db:
+    :param strUsrName: 微信号
+    :param page: 页码
+    :param size: 分页大小
+    :param start: 数据库起始偏移值
+    :param filterMode: 查询模式
+    :param dbNo: 数据库编号
+    :param sys_session: 用户 session
+    :return: 分页数据
+    """
+    logger.info(f'strUsrName: {strUsrName}')
+    current_db_no = 0
+    db_array = get_sorted_db(sys_session)
+    if filterMode == -1:
+        db_array = db_array[::-1]
+        logger.info(f"反向模式, 库排序 {db_array}")
+    if dbNo == -1:
+        dbNo = len(db_array) - 1
+        logger.info(f"数据库最大值 {dbNo}")
+
+    results = []
+    # 跨库查询
+    for num in range(dbNo, -1, -1):
+        db_sequence = db_array[num]
+        logger.info(f"查询库 {db_sequence}")
+        session_local = wx_db_msg(db_sequence, sys_session)
+        db = session_local()
+        logger.info(f"已查询的数据量 {len(results)}")
+        query_size = size - len(results)
+        logger.info(f"查询量 {query_size}")
+        logger.info(f"起始偏移 {start}")
+        current_db_no = num
+        logger.info(f"当前库索引 {current_db_no}")
+        try:
+            # 再根据id查询消息列表
+            logger.info(f"offset: {(page - 1) * size + start}, limit: {query_size}")
+            stmt = (select(msg.Msg).where(msg.Msg.StrTalker == strUsrName)
+                    .offset((page - 1) * size + start).limit(query_size))
+            # 查询模式
+            if filterMode >= 0:
+                stmt = stmt.where(msg.Msg.CreateTime <= CreateTime).order_by(msg.Msg.CreateTime.desc(),
+                                                                             msg.Msg.Sequence.desc())
+            else:
+                stmt = stmt.where(msg.Msg.CreateTime > CreateTime).order_by(msg.Msg.CreateTime.asc(),
+                                                                             msg.Msg.Sequence.asc())
+            logger.info(f"query sql: {stmt}")
+            msgs = db.execute(stmt).all()
+            logger.info(f"数据量 {len(msgs)}")
+            # 数据转换
+            msgs = parseMsg(msgs, micro_db, sys_session, strUsrName, num)
+            for m in msgs:
+                results.append(m)
+            if len(results) >= size:
+                if len(msgs) < size:
+                    start = len(msgs)
+                    logger.info(f"查询结束，设置起始偏移为 {start}")
+                break
+            # 修改起始偏移
+            start = 0
+            # 重置页码
+            logger.info(f"当前库数据不够一页 {size}，重置页码为 1，继续查询下一个库")
+            page = 1
+        finally:
+            db.close()
+    data = {
+        "dbNo": current_db_no,
+        "start": start,
+        "msgs": results
+    }
+    return data
+
+
+def parseMsg(msgs, micro_db: Session, sys_session: SysSession, strUsrName: str, dbNo: int):
+    personal_send = select_contact(micro_db, sys_session.wx_id)
+    personal_receive = select_contact(micro_db, strUsrName)
+    results = []
+    for r in msgs:
+        # 反序列化 ByteExtra 字段
+        nmsg = parse_msg.parse(r[0], sys_session.id, dbNo)
+        results.append(nmsg)
+        # 群聊
+        if strUsrName.endswith("@chatroom"):
+            if nmsg.WxId:
+                contact_data = select_contact(micro_db, nmsg.WxId)
+                if contact_data:
+                    nmsg.Remark = contact_data.Remark
+                    nmsg.NickName = contact_data.NickName
+                    nmsg.smallHeadImgUrl = contact_data.smallHeadImgUrl
+                    nmsg.bigHeadImgUrl = contact_data.bigHeadImgUrl
+            else:
+                if nmsg.IsSender == 1 and personal_send:
+                    nmsg.Remark = personal_send.Remark
+                    nmsg.NickName = personal_send.NickName
+                    nmsg.smallHeadImgUrl = personal_send.smallHeadImgUrl
+                    nmsg.bigHeadImgUrl = personal_send.bigHeadImgUrl
+        # 私聊
+        else:
+            if nmsg.IsSender == 1 and personal_send:
+                nmsg.Remark = personal_send.Remark
+                nmsg.NickName = personal_send.NickName
+                nmsg.smallHeadImgUrl = personal_send.smallHeadImgUrl
+                nmsg.bigHeadImgUrl = personal_send.bigHeadImgUrl
+            elif nmsg.IsSender == 0 and personal_receive:
+                nmsg.Remark = personal_receive.Remark
+                nmsg.NickName = personal_receive.NickName
+                nmsg.smallHeadImgUrl = personal_receive.smallHeadImgUrl
+                nmsg.bigHeadImgUrl = personal_receive.bigHeadImgUrl
+    return results
 
 
 def select_contact(micro_db: Session, wxId: str):

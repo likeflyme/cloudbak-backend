@@ -45,6 +45,14 @@ def analyze(sys_session_id: int):
         decode_msg(sys_session)
         logger.info("数据库解密完成")
 
+        try:
+            logger.info("开始数据库排序")
+            get_sorted_db(sys_session)
+            logger.info("数据库排序完成")
+        except Exception as e:
+            logger.error("数据库排序异常")
+            logger.error(e)
+
         # 头像提取
         logger.info("头像提取")
         try:
