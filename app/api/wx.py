@@ -88,8 +88,7 @@ def de_decrypt(sys_session_id: int,
     sys_session.update_time = update_time
     db.commit()
     db.refresh(sys_session)
-    logger.info("设置同步时间：")
-    logger.info("解析任务")
-    task_obj = TaskObj(sys_user.id, "数据解析任务", analyze, sys_session_id)
+    # 异步执行解析
+    task_obj = TaskObj(sys_user.id, "数据解析", analyze, sys_session_id)
     background_tasks.add_task(task_execute, task_obj)
     return sys_session

@@ -9,7 +9,7 @@ from Crypto.Cipher import AES
 
 from app.helper.directory_helper import get_wx_dir
 from app.models.sys import SysSession
-from config.log_config import logger
+from config.log_config import get_context_logger
 
 SQLITE_FILE_HEADER = bytes('SQLite format 3', encoding='ASCII') + bytes(1)
 IV_SIZE = 16
@@ -30,6 +30,7 @@ compiled_patterns = [re.compile(pattern) for pattern in patterns]
 
 
 def decode_msg(sys_session: SysSession):
+    logger = get_context_logger()
     wx_dir = get_wx_dir(sys_session)
     # 2. 数据库解密
     logger.info("数据库解密")
@@ -55,6 +56,7 @@ def decode_one(input_file, password):
     :param password:
     :return:
     """
+    logger = get_context_logger()
     logger.info('decryption file: %s', input_file)
     input_file = Path(input_file)
 

@@ -3,7 +3,7 @@ from collections import defaultdict
 
 from app.models.multi.msg import Msg
 from app.models.sys import SysSession
-from config.log_config import logger
+from config.log_config import get_context_logger
 from db.wx_db import wx_db_msg, msg_db_count
 
 session_msg_sort = defaultdict(lambda: None)
@@ -22,6 +22,7 @@ def get_sorted_db(sys_session: SysSession):
     :param sys_session:
     :return:
     """
+    logger = get_context_logger()
     sorted_array = session_msg_sort[sys_session.id]
     if sorted_array:
         logger.info(f"获取到缓存的库排序: {sorted_array}")

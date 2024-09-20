@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
-from sqlalchemy import select, and_, union
+from sqlalchemy import select, and_, union, or_
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth_dep import get_current_sys_session
@@ -256,10 +256,11 @@ def red_msgs_filter(strUsrName: str,
                         tm_stmt = stmt.where(msg.Msg.CreateTime > end_timestamp).order_by(msg.Msg.CreateTime.asc(), msg.Msg.Sequence.asc())
                 else:
                     type_list = convert_type(filterType)
+                    logger.info(f"query types {type_list}")
                     if type_list is None:
                         logger.warn(f"query type is {filterType} but convert type and sub type not found")
-                    for t in type_list:
-                        stmt = stmt.where(msg.Msg.Type == t[0]).where(msg.Msg.SubType == t[1])
+                    or_conditions = [and_(msg.Msg.Type == t[0], msg.Msg.SubType == t[1]) for t in type_list]
+                    stmt = stmt.where(or_(*or_conditions))
             if filterText is not None:
                 if filterType == 0:
                     stmt = stmt.where(msg.Msg.StrContent.contains(filterText))

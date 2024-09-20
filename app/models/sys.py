@@ -7,6 +7,7 @@ from db.sys_db import Base
 session_analyze_end = 0
 session_analyze_running = 1
 session_analyze_pending = 2
+session_analyze_fail = 3
 
 
 class SysUser(Base):

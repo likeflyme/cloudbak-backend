@@ -1,6 +1,7 @@
 import os.path
 import re
 import subprocess
+import time
 
 import google
 import pilk
@@ -19,7 +20,7 @@ from app.services.save_head_images import save_header_images, analyze_head_image
 from config.app_config import settings as app_settings
 from db.sys_db import SessionLocal
 from db.wx_db import get_session_local, msg_db_count, wx_db_msg
-from config.log_config import logger
+from config.log_config import logger, get_context_logger, analyze_logger
 from app.models.multi.msg import Msg
 from sqlalchemy import select, and_
 
@@ -182,5 +183,24 @@ def decode_media(data):
     os.system(f"ffmpeg -y -f s16le -i {pcm_name} -ar 44100 -ac 1 {mp3_name}")
 
 
-sys_session_id = 8
-analyze_head_images(sys_session_id)
+# sys_session_id = 8
+# analyze_head_images(sys_session_id)
+
+def logger_error_test(num):
+    log_dir = os.path.join(app_settings.sys_dir, app_settings.log_dir, app_settings.log_task_dir)
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    log_file_name = int(time.time() * 1000)
+    log_file_path = os.path.join(str(log_dir), str(log_file_name))
+    log = analyze_logger(str(log_file_name), log_file_path)
+
+    try:
+        if num == 1:
+            raise Exception('test error')
+    except Exception as e:
+        log.error(e)
+
+
+logger_error_test(1)
+
+

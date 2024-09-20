@@ -1,10 +1,14 @@
 import logging
 import os.path
 import uuid
+import contextvars
 from logging import Logger, LogRecord, getLogger
 from typing import Optional
 from config.app_config import settings
 from logging.handlers import TimedRotatingFileHandler
+
+
+context_logger = contextvars.ContextVar('context_logger', default=None)
 
 
 class CustomContextFilter(logging.Filter):
@@ -37,32 +41,83 @@ def set_log_id():
 
 def logger():
     # 创建一个日志记录器
-    logger = logging.getLogger('fastapi_app')
-    logger.setLevel(logging.INFO)
+    app_logger = logging.getLogger('fastapi_app')
+    app_logger.setLevel(logging.INFO)
 
     # 添加 ContextFilter 到全局 Logger
-    logger.addFilter(context_filter)
+    app_logger.addFilter(context_filter)
 
     formatter = RequestFormatter(fmt='%(asctime)s - %(request_id)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
     # 创建一个 handler 将日志输出到控制台
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
+    app_logger.addHandler(console_handler)
 
     log_dir = os.path.join(settings.sys_dir, settings.log_dir)
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     log_file_name = settings.log_file_name
-    log_file_path = os.path.join(log_dir, log_file_name)
+    log_file_path = os.path.join(str(log_dir), log_file_name)
     # 创建一个文件处理器，并设置编码为 UTF-8
     # 使用 TimedRotatingFileHandler 按日期分割日志文件
     file_handler = TimedRotatingFileHandler(
-        log_file_path, when='midnight', interval=1, backupCount=7, encoding='utf-8'
+        str(log_file_path), when='midnight', interval=1, backupCount=7, encoding='utf-8'
     )
     file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-    return logger
+    app_logger.addHandler(file_handler)
+    return app_logger
+
+
+def analyze_logger(logger_name: str, path: str):
+    """
+    数据解析用的日志记录器
+    :return:
+    """
+    a_logger = logging.getLogger(logger_name)
+    a_logger.setLevel(logging.INFO)
+
+    # 添加 ContextFilter 到全局 Logger
+    a_logger.addFilter(context_filter)
+
+    formatter = RequestFormatter(fmt='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+
+    # 创建一个 handler 将日志输出到控制台
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    a_logger.addHandler(console_handler)
+    # 创建一个文件处理器，并设置编码为 UTF-8
+    file_handler = logging.FileHandler(path, encoding='utf-8')
+    file_handler.setFormatter(formatter)
+    a_logger.addHandler(file_handler)
+    return a_logger
 
 
 logger = logger()
+
+
+def set_context_logger(c_logger):
+    """
+    设置上下文 logger
+    """
+    context_logger.set(c_logger)
+
+
+def get_context_logger() -> Logger:
+    """
+    获取上下文 logger，没有上下文 logger 则返回默认 logger
+    """
+    c_logger = context_logger.get()
+    if c_logger is None:
+        return logger
+    return c_logger
+
+
+def clear_logger(logger_name: str):
+    """
+    删除 loging 中的 logger
+    :param logger_name:
+    :return:
+    """
+    if logger_name in logging.Logger.manager.loggerDict:
+        del logging.Logger.manager.loggerDict[logger_name]

@@ -97,6 +97,6 @@ def delete_session(sys_session_id: int,
             sys_user.current_session_id = first_session.id
             db.commit()
     # 异步执行清除硬盘数据
-    task_obj = TaskObj(sys_user.id, "清除session数据", clear_session, sys_session)
+    task_obj = TaskObj(sys_user.id, "清除session数据", clear_session, sys_session.id)
     background_tasks.add_task(task_execute, task_obj)
 

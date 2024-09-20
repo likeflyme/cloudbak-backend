@@ -1,8 +1,10 @@
 import time
+import os
 
 from db.sys_db import SessionLocal
 from app.models.sys import SysTask
-from config.log_config import logger
+from config.log_config import analyze_logger, set_context_logger, clear_logger
+from config.app_config import settings
 
 task_running = 2  # 任务执行中
 task_success = 0  # 任务执行完成
@@ -28,9 +30,18 @@ class TaskExecutionError(Exception):
 
 def task_execute(obj: TaskObj):
     start_time = time.time()
+    log_dir = os.path.join(settings.sys_dir, settings.log_dir, settings.log_task_dir)
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    log_file_name = int(time.time() * 1000)
+    log_file_path = os.path.join(str(log_dir), str(log_file_name))
+    logger = analyze_logger(str(log_file_name), log_file_path)
+    # 设置上下文 logger
+    set_context_logger(logger)
     logger.info("执行任务：" + obj.name)
     db = SessionLocal()
-    task = SysTask(name=obj.name, owner_id=obj.owner_id, state=task_running)
+    relative_path = os.path.join(settings.log_dir, settings.log_task_dir, str(log_file_name))
+    task = SysTask(name=obj.name, owner_id=obj.owner_id, state=task_running, detail=str(relative_path))
     try:
         db.add(task)
         db.commit()
@@ -44,10 +55,9 @@ def task_execute(obj: TaskObj):
             task.detail = e.message
         except Exception as e:
             task.state = task_fail
-            task.detail = "Unexpect Error, Please check out system log file"
-            logger.error("任务中函数执行未知异常", e)
+            logger.error(e)
     except Exception as e:
-        logger.error("任务执行未知异常", e)
+        logger.error(e)
     finally:
         # 更新时间
         task.update_time = time.time()
@@ -59,3 +69,5 @@ def task_execute(obj: TaskObj):
         # 转换为毫秒
         execution_time_ms = execution_time * 1000
         logger.info(f'任务执行完成，花费时间: {execution_time_ms}ms')
+        # 销毁 logger
+        clear_logger(str(log_file_name))
