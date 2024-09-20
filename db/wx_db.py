@@ -7,11 +7,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from starlette import status
 
-from app.dependencies.auth_dep import get_current_wx_id, get_current_sys_session
+from app.dependencies.auth_dep import get_current_sys_session
 from app.helper.directory_helper import get_wx_dir
 from app.models.sys import SysSession
-from config import app_config
-from config import data_config
 from sqlalchemy.ext.declarative import declarative_base
 from config.log_config import logger
 from config.wx_config import settings as wx_settings
@@ -26,6 +24,7 @@ engine_dict = defaultdict(lambda: None)
 
 def clear_wx_db_cache():
     session_local_dict.clear()
+    engine_dict.clear()
 
 
 def clear_session_db_cache(session_dir):

@@ -38,7 +38,7 @@ def task_execute(obj: TaskObj):
     logger = analyze_logger(str(log_file_name), log_file_path)
     # 设置上下文 logger
     set_context_logger(logger)
-    logger.info("执行任务：" + obj.name)
+    logger.info(f'执行任务：{obj.name}')
     db = SessionLocal()
     relative_path = os.path.join(settings.log_dir, settings.log_task_dir, str(log_file_name))
     task = SysTask(name=obj.name, owner_id=obj.owner_id, state=task_running, detail=str(relative_path))
@@ -55,19 +55,18 @@ def task_execute(obj: TaskObj):
             task.detail = e.message
         except Exception as e:
             task.state = task_fail
+            logger.error("任务执行异常")
             logger.error(e)
     except Exception as e:
+        logger.info("任务数据提交异常")
         logger.error(e)
     finally:
         # 更新时间
         task.update_time = time.time()
         db.commit()
         db.close()
-        end_time = time.time()
         # 计算执行时间，单位为秒
-        execution_time = end_time - start_time
-        # 转换为毫秒
-        execution_time_ms = execution_time * 1000
-        logger.info(f'任务执行完成，花费时间: {execution_time_ms}ms')
+        execution_time = time.time() - start_time
+        logger.info(f'任务执行完成，花费时间: {execution_time}s')
         # 销毁 logger
         clear_logger(str(log_file_name))
