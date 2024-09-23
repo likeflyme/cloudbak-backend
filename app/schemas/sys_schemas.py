@@ -113,3 +113,14 @@ class CreateSysSessionSchema(BaseModel):
     wx_mobile: str | None = None
 
 
+class SysTaskOut(BaseModel):
+    id: int
+    name: str
+    state: int
+    detail: str | None = None
+    create_time: float
+    update_time: float
+    owner_id: int
+
+
+

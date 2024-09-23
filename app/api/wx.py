@@ -79,11 +79,20 @@ async def upload_zip(
 
 
 @router.post("/do-decrypt/{sys_session_id}", response_model=SysSessionOut)
-def de_decrypt(sys_session_id: int,
+def client_decrypt(sys_session_id: int,
                background_tasks: BackgroundTasks,
                update_time: int = int(time.time()),
                sys_user: User = Depends(get_current_user),
                db: Session = Depends(get_db)):
+    """
+    客户端同步完数据后调用，设置上次同步时间，提交异步解析任务
+    :param sys_session_id:
+    :param background_tasks:
+    :param update_time:
+    :param sys_user:
+    :param db:
+    :return:
+    """
     sys_session = db.query(SysSession).filter_by(id=sys_session_id).first()
     sys_session.update_time = update_time
     db.commit()

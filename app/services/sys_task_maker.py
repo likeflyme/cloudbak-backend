@@ -41,7 +41,7 @@ def task_execute(obj: TaskObj):
     logger.info(f'执行任务：{obj.name}')
     db = SessionLocal()
     relative_path = os.path.join(settings.log_dir, settings.log_task_dir, str(log_file_name))
-    task = SysTask(name=obj.name, owner_id=obj.owner_id, state=task_running, detail=str(relative_path))
+    task = SysTask(name=obj.name, owner_id=obj.owner_id, state=task_running, detail=str(relative_path), create_time=start_time, update_time=start_time)
     try:
         db.add(task)
         db.commit()
@@ -53,6 +53,7 @@ def task_execute(obj: TaskObj):
         except TaskExecutionError as e:
             task.state = task_fail
             task.detail = e.message
+            logger.error(e.message)
         except Exception as e:
             task.state = task_fail
             logger.error("任务执行异常")
