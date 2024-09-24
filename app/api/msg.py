@@ -537,15 +537,23 @@ async def get_media(
     sys_session = db.query(SysSession).filter_by(id=session_id).first()
     media_folder = get_decoded_media_path(sys_session)
     mp3_name = os.path.join(media_folder, f"{MsgSvrID}.mp3")
+    logger.info(f"mp3: {mp3_name}")
     if os.path.exists(mp3_name):
+        logger.info("存在，直接返回该数据")
         return FileResponse(mp3_name)
     else:
+        logger.info("不存在，临时生成")
         session_local = wx_db_media_msg(db_no, sys_session)
         media_db = session_local()
         media = media_db.query(Media).filter_by(Reserved0=MsgSvrID).first()
-        if media:
+        logger.info(f"{media}")
+        if media and media.Buf:
+            logger.info("查询到 media，准备生成 mp3 文件")
             mp3_name = decode_media(media_folder, MsgSvrID, media.Buf)
+            logger.info(f"生成成功，{mp3_name}")
             return FileResponse(mp3_name)
+        logger.info("库中不存在 media 记录或 media 记录不存在 Buf 值")
+    logger.info("没有获取到数据，返回 404")
     raise HTTPException(status_code=404, detail="File not found")
 
 
