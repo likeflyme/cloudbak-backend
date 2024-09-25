@@ -11,7 +11,7 @@ from app.dependencies.auth_dep import get_current_sys_session
 from app.helper.directory_helper import get_wx_dir
 from app.models.sys import SysSession
 from sqlalchemy.ext.declarative import declarative_base
-from config.log_config import logger
+from config.log_config import logger, get_context_logger
 from config.wx_config import settings as wx_settings
 
 Base = declarative_base()
@@ -28,7 +28,8 @@ def clear_wx_db_cache():
 
 
 def clear_session_db_cache(session_dir):
-    logger.info(f"清除微信db连接缓存: {session_dir}")
+    c_logger = get_context_logger()
+    c_logger.info(f"清除微信db连接缓存: {session_dir}")
     try:
         keys_to_delete = []  # 需要删除的 keys
         for key in engine_dict.keys():
@@ -38,16 +39,18 @@ def clear_session_db_cache(session_dir):
                 engine = engine_dict[key]
                 if engine:
                     # 关闭所有连接
-                    logger.info(f"engin关闭所有连接：{key}")
+                    c_logger.info(f"engin关闭所有连接：{key}")
                     engine.dispose()
+                # 放入待删除列表
+                keys_to_delete.append(key)
         # 删除缓存字典中的数据
         for key in keys_to_delete:
             del engine_dict[key]
             del session_local_dict[key]
-            logger.info(f"已删除缓存中的连接和会话：{key}")
+            c_logger.info(f"已删除缓存中的连接和会话：{key}")
     except Exception as e:
-        logger.info("关闭连接异常")
-        logger.error(e)
+        c_logger.info("关闭连接异常")
+        c_logger.error(e)
 
 
 def get_session_local(db_path):

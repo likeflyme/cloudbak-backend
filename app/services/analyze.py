@@ -5,7 +5,7 @@ from app.models.sys import SysSession
 from app.services.decode_wx_db import decode_msg
 from config.log_config import get_context_logger
 from db.sys_db import SessionLocal
-from db.wx_db import clear_wx_db_cache
+from db.wx_db import clear_wx_db_cache, clear_session_db_cache
 from .db_order import clear_session_msg_sort, get_sorted_db
 from .decode_wx_pictures import decrypt_images
 from .save_head_images import save_header_images, analyze_head_images
@@ -32,13 +32,14 @@ def analyze(sys_session_id: int):
     logger.info("执行 analyze 任务")
     db = SessionLocal()
     sys_session = db.query(SysSession).filter_by(id=sys_session_id).first()
+    session_dir = get_session_dir(sys_session_id)
     try:
         sys_session.analyze_state = session_analyze_running
         db.commit()
 
         # 清除微信数据库链接缓存
         logger.info("清除缓存数据库连接-------------------------")
-        clear_wx_db_cache()
+        clear_session_db_cache(session_dir)
         logger.info("清除session消息库排序缓存-----------------------------")
         clear_session_msg_sort(sys_session_id)
 
