@@ -104,6 +104,14 @@ class SysSessionSchemaWithId(SysSessionSchema):
     id: int
 
 
+class SysSessionSchemaWithHeadImg(SysSessionSchema):
+    id: int
+    smallHeadImgUrl: str | None = None
+    bigHeadImgUrl: str | None = None
+    wx_key: str | None = None
+    data_path: str | None = None
+
+
 class CreateSysSessionSchema(BaseModel):
     name: str
     wx_key: str

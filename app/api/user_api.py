@@ -1,15 +1,21 @@
+import os
 from typing import List
 
 from fastapi import Depends, APIRouter, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth_dep import get_current_user, pwd_context
+from app.helper.directory_helper import get_wx_dir
+from app.models.micro_msg import ContactHeadImgUrl
 from app.models.sys import SysUser, SysSession
-from app.schemas.sys_schemas import SysSessionSchemaWithId, SysSessionIn, SysSessionOut, UserCreate
+from app.schemas.sys_schemas import SysSessionSchemaWithId, SysSessionIn, SysSessionOut, UserCreate, \
+    SysSessionSchemaWithHeadImg
 from app.services.clear_session import clear_session
 from app.services.sys_task_maker import TaskObj, task_execute
 from config.log_config import logger
 from db.sys_db import get_db
+from config.wx_config import settings as wx_settings
+from db.wx_db import get_session_local
 
 router = APIRouter(
     prefix="/user"
@@ -42,7 +48,7 @@ def create_user(user_in: UserCreate, db: Session = Depends(get_db)):
     db.commit()
 
 
-@router.put("/set-current-session-id", response_model=SysSessionSchemaWithId)
+@router.put("/set-current-session-id", response_model=SysSessionSchemaWithHeadImg)
 def update_current_session(sys_session_id: int, user: SysUser = Depends(get_current_user),
                            db: Session = Depends(get_db)):
     db_user = db.query(SysUser).filter_by(id=user.id).first()
@@ -50,7 +56,27 @@ def update_current_session(sys_session_id: int, user: SysUser = Depends(get_curr
     db.commit()
     # 缓存中的数据
     user.current_session_id = sys_session_id
-    return db.query(SysSession).filter_by(id=sys_session_id).first()
+    sys_session = db.query(SysSession).filter_by(id=sys_session_id).first()
+
+    data_path = get_wx_dir(sys_session)
+    db_path = os.path.join(data_path, wx_settings.db_micro_msg)
+    logger.info("DB: %s", db_path)
+    data = SysSessionSchemaWithHeadImg(**sys_session.__dict__)
+    # 数据目录
+    data.data_path = data_path
+    if not os.path.exists(db_path):
+        return data
+    # 存在微信库文件则查询微信用户头像信息
+    SessionLocal = get_session_local(db_path)
+    micro_db = SessionLocal()
+    try:
+        head_img = micro_db.query(ContactHeadImgUrl).filter_by(usrName=sys_session.wx_id).first()
+        if head_img:
+            data.smallHeadImgUrl = head_img.smallHeadImgUrl
+            data.bigHeadImgUrl = head_img.bigHeadImgUrl
+    finally:
+        micro_db.close()
+    return data
 
 
 @router.get("/sys-sessions", response_model=List[SysSessionOut])
