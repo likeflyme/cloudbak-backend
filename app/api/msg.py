@@ -25,8 +25,8 @@ from app.services.decode_wx_media import decode_media
 from app.services.decode_wx_pictures import decrypt_file
 from config.log_config import logger
 from db.sys_db import get_db
-from db.wx_db import wx_db_micro_msg, wx_db_msg, msg_db_count, wx_db_media_msg
-from app.services.db_order import get_sorted_db, reversed_array
+from db.wx_db import wx_db_micro_msg, wx_db_msg, msg_db_count, wx_db_media_msg, wx_db_media_msg_by_filename
+from app.services.db_order import get_sorted_db, reversed_array, media_msg_db_array
 
 session_local_dict = defaultdict(lambda: None)
 
@@ -532,7 +532,7 @@ async def get_image(img_path: str, session_id: int):
 async def get_media(
         MsgSvrID: str,
         session_id: int,
-        db_no: int,
+        db_no: int = 0,
         db: Session = Depends(get_db)):
     sys_session = db.query(SysSession).filter_by(id=session_id).first()
     media_folder = get_decoded_media_path(sys_session)
@@ -543,16 +543,22 @@ async def get_media(
         return FileResponse(mp3_name)
     else:
         logger.info("不存在，临时生成")
-        session_local = wx_db_media_msg(db_no, sys_session)
-        media_db = session_local()
-        media = media_db.query(Media).filter_by(Reserved0=MsgSvrID).first()
-        logger.info(f"{media}")
-        if media and media.Buf:
-            logger.info("查询到 media，准备生成 mp3 文件")
-            mp3_name = decode_media(media_folder, MsgSvrID, media.Buf)
-            logger.info(f"生成成功，{mp3_name}")
-            return FileResponse(mp3_name)
-        logger.info("库中不存在 media 记录或 media 记录不存在 Buf 值")
+        db_array = media_msg_db_array(sys_session)
+        for filename in db_array:
+            session_local = wx_db_media_msg_by_filename(filename, sys_session)
+            media_db = session_local()
+            try:
+                media = media_db.query(Media).filter_by(Reserved0=MsgSvrID).first()
+                logger.info(f"{media}")
+                if media and media.Buf:
+                    logger.info("查询到 media，准备生成 mp3 文件")
+                    mp3_name = decode_media(media_folder, MsgSvrID, media.Buf)
+                    logger.info(f"生成成功，{mp3_name}")
+                    return FileResponse(mp3_name)
+                else:
+                    logger.info("库中不存在 media 记录或 media 记录不存在 Buf 值")
+            finally:
+                media_db.close()
     logger.info("没有获取到数据，返回 404")
     raise HTTPException(status_code=404, detail="File not found")
 

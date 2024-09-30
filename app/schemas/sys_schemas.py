@@ -63,6 +63,21 @@ class SysSessionIn(BaseModel):
         from_attributes = True
 
 
+class SysSessionUpdate(BaseModel):
+    name: str
+    desc: str | None = None
+    wx_key: str
+    wx_id: str
+    wx_name: str
+    wx_acct_name: str
+    wx_key: str
+    wx_mobile: str | None = None
+    update_time: int
+
+    class Config:
+        from_attributes = True
+
+
 class SysSessionSchema(BaseModel):
     id: int
     name: str | None = None

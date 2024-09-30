@@ -9,7 +9,7 @@ from app.helper.directory_helper import get_wx_dir
 from app.models.micro_msg import ContactHeadImgUrl
 from app.models.sys import SysUser, SysSession
 from app.schemas.sys_schemas import SysSessionSchemaWithId, SysSessionIn, SysSessionOut, UserCreate, \
-    SysSessionSchemaWithHeadImg
+    SysSessionSchemaWithHeadImg, SysSessionUpdate
 from app.services.clear_session import clear_session
 from app.services.sys_task_maker import TaskObj, task_execute
 from config.log_config import logger
@@ -125,4 +125,16 @@ def delete_session(sys_session_id: int,
     # 异步执行清除硬盘数据
     task_obj = TaskObj(sys_user.id, "清除session数据", clear_session, sys_session.id)
     background_tasks.add_task(task_execute, task_obj)
+
+
+@router.put("/sys-session/{sys_session_id}", response_model=SysSessionSchemaWithId)
+def update_session(
+        sys_session_id: int,
+        sys_session_update: SysSessionUpdate,
+        user: SysUser = Depends(get_current_user),
+        db: Session = Depends(get_db)):
+    logger.info("sys_session修改")
+    logger.info(sys_session_update)
+
+    db.query(SysSession).filter_by(id=sys_session_id).update(sys_session_update.__dict__)
 

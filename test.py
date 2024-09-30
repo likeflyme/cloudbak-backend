@@ -19,7 +19,7 @@ from app.models.sys import SysUser, SysSession
 from app.services.save_head_images import save_header_images, analyze_head_images
 from config.app_config import settings as app_settings
 from db.sys_db import SessionLocal
-from db.wx_db import get_session_local, msg_db_count, wx_db_msg
+from db.wx_db import get_session_local, msg_db_count, wx_db_msg, media_msg_db_array
 from config.log_config import logger, get_context_logger, analyze_logger
 from app.models.multi.msg import Msg
 from sqlalchemy import select, and_
@@ -201,6 +201,11 @@ def logger_error_test(num):
         log.error(e)
 
 
-logger_error_test(1)
+db = SessionLocal()
+sys_session = db.query(SysSession).filter_by(id=8).first()
 
+db_array = media_msg_db_array(sys_session)
+db_array.sort(reverse=True)
+for filename in db_array:
+    print(filename)
 

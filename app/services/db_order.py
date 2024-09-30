@@ -4,14 +4,18 @@ from collections import defaultdict
 from app.models.multi.msg import Msg
 from app.models.sys import SysSession
 from config.log_config import get_context_logger
-from db.wx_db import wx_db_msg, msg_db_count
+from db.wx_db import wx_db_msg, msg_db_count, media_msg_db_array as wx_db_media_msg_db_array
 
 session_msg_sort = defaultdict(lambda: None)
+# 保存MediaMSG文件名列表，从大到小排序
+session_media_msg_sort = defaultdict(lambda: None)
 
 
 def clear_session_msg_sort(sys_session_id):
     if sys_session_id in session_msg_sort:
         del session_msg_sort[sys_session_id]
+    if sys_session_id in session_media_msg_sort:
+        del session_media_msg_sort[sys_session_id]
 
 
 def get_sorted_db(sys_session: SysSession):
@@ -58,3 +62,16 @@ def get_sorted_db(sys_session: SysSession):
 def reversed_array(sys_session: SysSession):
     sorted_array = get_sorted_db(sys_session)
     return sorted_array.reverse()
+
+
+def media_msg_db_array(sys_session: SysSession):
+    logger = get_context_logger()
+    sorted_array = session_media_msg_sort[sys_session.id]
+    if sorted_array:
+        logger.info(f"获取到MediaMSG缓存的库排序: {sorted_array}")
+        return sorted_array
+    # 直接查询的数据是从小到大排序，需要反向排序
+    sorted_array = wx_db_media_msg_db_array(sys_session)
+    sorted_array.sort(reverse=True)
+    session_media_msg_sort[sys_session.id] = sorted_array
+    logger.info(f"生成MediaMSG库排序缓存：{session_msg_sort[sys_session.id]}")

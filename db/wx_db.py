@@ -82,6 +82,17 @@ def msg_db_count(sys_session: SysSession) -> int:
     return count
 
 
+def media_msg_db_array(sys_session: SysSession) -> list:
+    path = os.path.join(get_wx_dir(sys_session), wx_settings.db_multi)
+    pattern = re.compile(r'^decoded_MediaMSG\d+\.db$')
+    db_array = []
+    # 遍历目录中的文件
+    for filename in os.listdir(path):
+        if pattern.match(filename):
+            db_array.append(filename)
+    return db_array
+
+
 def wx_db_msg(c: int, sys_session: SysSession):
     db_path = os.path.join(get_wx_dir(sys_session), wx_settings.db_multi_msg + str(c) + '.db')
     logger.info(f"{db_path}")
@@ -92,6 +103,14 @@ def wx_db_msg(c: int, sys_session: SysSession):
 
 def wx_db_media_msg(c: int, sys_session):
     db_path = os.path.join(get_wx_dir(sys_session), wx_settings.db_multi_media_msg + str(c) + '.db')
+    logger.info(f"{db_path}")
+    if not os.path.exists(db_path):
+        return None
+    return get_session_local(db_path)
+
+
+def wx_db_media_msg_by_filename(filename: str, sys_session):
+    db_path = os.path.join(get_wx_dir(sys_session), wx_settings.db_multi, filename)
     logger.info(f"{db_path}")
     if not os.path.exists(db_path):
         return None
