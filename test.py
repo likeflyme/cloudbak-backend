@@ -2,6 +2,7 @@ import os.path
 import re
 import subprocess
 import time
+from datetime import datetime
 
 import google
 import pilk
@@ -201,11 +202,27 @@ def logger_error_test(num):
         log.error(e)
 
 
-db = SessionLocal()
-sys_session = db.query(SysSession).filter_by(id=8).first()
+from apscheduler.schedulers.blocking import BlockingScheduler
+scheduler = BlockingScheduler()
 
-db_array = media_msg_db_array(sys_session)
-db_array.sort(reverse=True)
-for filename in db_array:
-    print(filename)
+
+def tick():
+    print('Tick! The time is: %s' % datetime.now())
+    jobs = scheduler.get_jobs()
+    print(len(jobs))
+    for job in jobs:
+        print(f'Job is ${job.id} - ${job.name}, ${job.args}')
+
+
+if __name__ == '__main__':
+
+    scheduler.add_executor('processpool')
+    scheduler.add_job(tick, 'interval', seconds=3)
+    print('Press Ctrl+{0} to exit'.format('Break' if os.name == 'nt' else 'C'))
+
+    try:
+        scheduler.start()
+    except (KeyboardInterrupt, SystemExit):
+        pass
+
 

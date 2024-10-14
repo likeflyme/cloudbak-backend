@@ -128,6 +128,7 @@ def red_msgs(strUsrName: str,
     logger.info(f'strUsrName: {strUsrName}')
     current_db_no = 0
     db_array = get_sorted_db(sys_session)
+    logger.info(f"库排序 {db_array}")
     if dbNo == -1:
         dbNo = len(db_array) - 1
         logger.info(f"数据库最大值 {dbNo}")
@@ -138,6 +139,10 @@ def red_msgs(strUsrName: str,
         db_sequence = db_array[num]
         logger.info(f"查询库 {db_sequence}")
         session_local = wx_db_msg(db_sequence, sys_session)
+        # 没有这个库则继续
+        if session_local is None:
+            logger.info(f"库 {db_sequence} 不存在，继续查询下一个库")
+            continue
         db = session_local()
         logger.info(f"已查询的数据量 {len(results)}")
         query_size = size - len(results)
@@ -223,6 +228,10 @@ def red_msgs_filter(strUsrName: str,
         db_sequence = db_array[num]
         logger.info(f"查询库 {db_sequence}")
         session_local = wx_db_msg(db_sequence, sys_session)
+        # 没有这个库则继续
+        if session_local is None:
+            logger.info(f"库 {db_sequence} 不存在，继续查询下一个库")
+            continue
         db = session_local()
         logger.info(f"已查询的数据量 {len(results)}")
         query_size = size - len(results)
@@ -339,6 +348,10 @@ def red_msgs_by_local_id(strUsrName: str,
         db_sequence = db_array[num]
         logger.info(f"查询库 {db_sequence}")
         session_local = wx_db_msg(db_sequence, sys_session)
+        # 没有这个库则继续
+        if session_local is None:
+            logger.info(f"库 {db_sequence} 不存在，继续查询下一个库")
+            continue
         db = session_local()
         logger.info(f"已查询的数据量 {len(results)}")
         query_size = size - len(results)

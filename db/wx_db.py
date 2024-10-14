@@ -61,7 +61,12 @@ def get_session_local(db_path):
     """
     if session_local_dict[db_path] is None:
         engine = create_engine(
-            f"sqlite:///{db_path}", connect_args={"check_same_thread": False}
+            f"sqlite:///{db_path}",
+            connect_args={"check_same_thread": False},
+            pool_size=5,
+            max_overflow=10,
+            pool_timeout=30,
+            pool_recycle=3600
         )
         engine_dict[db_path] = engine
         session_local_dict[db_path] = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -97,6 +102,7 @@ def wx_db_msg(c: int, sys_session: SysSession):
     db_path = os.path.join(get_wx_dir(sys_session), wx_settings.db_multi_msg + str(c) + '.db')
     logger.info(f"{db_path}")
     if not os.path.exists(db_path):
+        logger.info("库文件不存在")
         return None
     return get_session_local(db_path)
 

@@ -74,4 +74,5 @@ def media_msg_db_array(sys_session: SysSession):
     sorted_array = wx_db_media_msg_db_array(sys_session)
     sorted_array.sort(reverse=True)
     session_media_msg_sort[sys_session.id] = sorted_array
-    logger.info(f"生成MediaMSG库排序缓存：{session_msg_sort[sys_session.id]}")
+    logger.info(f"生成MediaMSG库排序缓存：{session_media_msg_sort[sys_session.id]}")
+    return media_msg_db_array
