@@ -1,0 +1,83 @@
+import os
+import json
+from datetime import datetime
+from collections import defaultdict
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+
+from app.models.sys import SysConfig, SysSession
+from db.sys_db import SessionLocal
+from app.services.analyze import analyze
+
+from app.services.sys_task_maker import TaskObj, task_execute
+from config.log_config import logger
+
+scheduler = BackgroundScheduler()
+
+# analyze-user_id-session_id -> Job
+job_mapping = defaultdict(lambda: None)
+
+JOB_STABLE_ANALYZE = 'analyze_stable'
+JOB_ONCE_ANALYZE = 'analyze_once'
+
+
+def create_scheduler():
+    scheduler.add_executor('processpool')
+    with SessionLocal() as session:
+        configs = session.query(SysConfig).filter_by(conf_key='session_conf').all()
+        for config in configs:
+            if config.conf_value:
+                conf_obj = json.loads(config.conf_value)
+                analyze_list = conf_obj['analyze']
+                for single in analyze_list:
+                    sys_session = session.query(SysSession).filter_by(id=config.session_id).first()
+                    if not sys_session:
+                        logger.warn(f'no sys_session id is: {config.session_id}')
+                        continue
+                    analyze_open = single['analyze_open']
+                    if analyze_open:
+                        analyze_cron = single['analyze_cron']
+                        key = f"{JOB_STABLE_ANALYZE}-{config.user_id}-{sys_session.id}"
+                        add_job(key, f"定时数据解析-{sys_session.name}", analyze_cron, config.user_id, analyze, sys_session.id)
+    logger.info('start background scheduler')
+
+    scheduler.start()
+
+
+def add_job(key, job_name, job_cron, user_id, func, *args):
+    """
+    添加job
+    :param key: 用于删除
+    :param job_name: 展示给用户的名字
+    :param job_cron: cron 表达式
+    :param user_id: 属于哪个用户
+    :param func: 函数名
+    :param args: 函数参数
+    :return:
+    """
+    logger.info(f'add a {key}, cron is {job_cron}, user: {user_id}')
+    if job_mapping[key]:
+        logger.warning('job is exist')
+        return
+    task_obj = TaskObj(user_id, job_name, func, args)
+    job = scheduler.add_job(task_execute, trigger=CronTrigger.from_crontab(job_cron), args=[task_obj])
+    job_mapping[key] = job
+
+
+def remove_job(key):
+    """
+    删除job
+    :param key:
+    :return:
+    """
+    logger.info(f'remove a job named {key}')
+    job = job_mapping[key]
+    if not job:
+        logger.warning('job not exist')
+        return False
+    del job_mapping[key]
+
+
+def job_key(job_type, user_id, sys_session_id):
+    return f"{job_type}-{user_id}-{sys_session_id}"

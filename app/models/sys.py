@@ -60,3 +60,20 @@ class SysTask(Base):
     create_time = Column(Integer, default=time.time())
     update_time = Column(Integer, default=time.time())
     owner_id = Column(Integer, ForeignKey("sys_user.id"), default=None)
+
+
+class SysConfig(Base):
+    __tablename__ = 'sys_config'
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    conf_key = Column(String)
+    conf_value = Column(String)
+    user_id = Column(Integer, ForeignKey("sys_user.id"))
+    session_id = Column(Integer, ForeignKey("sys_session.id"))
+    create_time = Column(Integer, default=time.time())
+    update_time = Column(Integer, default=time.time())
+    reversed0 = Column(Integer)
+    reversed1 = Column(Integer)
+    reversed2 = Column(String)
+    reversed3 = Column(String)

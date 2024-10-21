@@ -224,5 +224,10 @@ if __name__ == '__main__':
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):
         pass
+    # with SessionLocal() as session:
+    #     sys_session = session.query(SysSession).filter_by(id=8).one()
+    #     session_local = wx_db_msg(15, sys_session)
+    #     if session_local is None:
+    #         logger.info(f"库 {15} 不存在，继续查询下一个库")
 
 

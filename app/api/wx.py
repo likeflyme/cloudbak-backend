@@ -98,6 +98,6 @@ def client_decrypt(sys_session_id: int,
     db.commit()
     db.refresh(sys_session)
     # 异步执行解析
-    task_obj = TaskObj(sys_user.id, "数据解析", analyze, sys_session_id)
+    task_obj = TaskObj(sys_user.id, f"数据解析-{sys_session.name}", analyze, sys_session_id)
     background_tasks.add_task(task_execute, task_obj)
     return sys_session

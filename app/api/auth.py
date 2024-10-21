@@ -6,7 +6,8 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth_dep import create_access_token, get_current_user, verify_password, get_current_sys_session
-from app.models.sys import SysUser, SysSession
+from app.models.sys import SysUser, SysSession, SysConfig
+from app.schemas.sys_conf_schemas import SysConfigOut
 from app.schemas.sys_schemas import Token, User
 from config.auth_config import settings
 from db.sys_db import get_db
@@ -35,11 +36,26 @@ def create_token(form_data: OAuth2PasswordRequestForm = Depends(), session: Sess
 
 
 @router.get("/me", response_model=User)
-def read_curren_user(user: User = Depends(get_current_user),
+def read_curren_user(db: Session = Depends(get_db),
+                     user: User = Depends(get_current_user),
                      session: SysSession = Depends(get_current_sys_session)):
+    # 加载用户配置
+    session_confs = db.query(SysConfig).filter_by(conf_key='session_conf', user_id=user.id).all()
+    user_conf = db.query(SysConfig).filter_by(conf_key='user_conf', user_id=user.id).first()
+    sys_conf = None
+    if user.id == 1:
+        sys_conf = db.query(SysConfig).filter_by(conf_key='sys_conf').first()
+    if user_conf:
+        session_confs.append(user_conf)
+    if sys_conf:
+        session_confs.append(sys_conf)
+    configs = []
+    for conf in session_confs:
+        configs.append(SysConfigOut(**conf.__dict__))
     return {
         "id": user.id,
         "username": user.username,
         "current_session_id": user.current_session_id,
-        "current_session": session
+        "current_session": session,
+        "configs": configs
     }

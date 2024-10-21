@@ -23,3 +23,9 @@ def get_db():
         yield my_db
     finally:
         my_db.close()
+
+
+def clear_all():
+    session = SessionLocal()
+    session.close()  # 关闭会话
+    engine.dispose()

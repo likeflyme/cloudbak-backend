@@ -53,6 +53,19 @@ def clear_session_db_cache(session_dir):
         c_logger.error(e)
 
 
+def clear_all():
+    for db_path, session_local in session_local_dict.items():
+        if session_local is not None:
+            session = session_local()
+            session.close()  # 关闭会话
+            engine = engine_dict[db_path]
+            if engine:
+                engine.dispose()  # 关闭引擎
+                del engine_dict[db_path]
+    # 清空 session_local_dict
+    session_local_dict.clear()
+
+
 def get_session_local(db_path):
     """
     获取对应数据库文件的 session local

@@ -28,10 +28,12 @@ def analyze_head_images(sys_session_id: int):
 def save_header_images(sys_session: SysSession):
     logger = get_context_logger()
     db_file_path = os.path.join(get_wx_dir(sys_session), wx_settings.db_misc)
+    logger.info(f"Misc db path: {db_file_path}")
     db_session = get_session_local(db_file_path)
     db = db_session()
 
     db_micro_file_path = os.path.join(get_wx_dir(sys_session), wx_settings.db_micro_msg)
+    logger.info(f"MicroMsg db path: {db_file_path}")
     db_micro_session = get_session_local(db_micro_file_path)
     db_micro_db = db_micro_session()
     try:

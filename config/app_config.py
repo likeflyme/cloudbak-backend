@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     sessions_dir: str = 'sessions'
     server_host: str = '0.0.0.0'
     server_port: int = 8000
+    # session 级别默认配置
+    conf_session_default: str = '{"analyze":{"analyze_open": false}'
 
     class Config:
         env_prefix = 'APP_'

@@ -5,14 +5,18 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.dependencies.auth_dep import get_current_user
-from app.models.sys import SysTask, SysUser
+from app.dependencies.auth_dep import get_current_user, get_current_sys_session
+from app.models.sys import SysTask, SysUser, SysConfig, SysSession
+from app.schemas.sys_conf_schemas import JobIn
+from app.sheduler import JOB_STABLE_ANALYZE, remove_job, add_job
 from config.app_config import settings
 from db.sys_db import get_db
 from app.services.analyze import analyze
 from app.services.sys_task_maker import TaskObj, task_execute
 
 from app.schemas.sys_schemas import SysTaskOut
+from app.sheduler import job_key
+from config.log_config import logger
 
 router = APIRouter(
     prefix="/task"
@@ -52,3 +56,20 @@ def single_decrypt(sys_session_id: int,
     """
     task_obj = TaskObj(sys_user.id, "数据解析", analyze, sys_session_id)
     background_tasks.add_task(task_execute, task_obj)
+
+
+@router.post("/update-analyze-job")
+def update_analyze_job(job_in: JobIn,
+                       sys_user: SysUser = Depends(get_current_user),
+                       sys_session: SysSession = Depends(get_current_sys_session)):
+    """
+    修改解析任务
+    :param job_in: 任务数据
+    :param sys_user:
+    :param sys_session:
+    :return:
+    """
+    key = job_key(JOB_STABLE_ANALYZE, sys_user.id, job_in.sys_session_id)
+    remove_job(key)
+    if job_in.open:
+        add_job(key, f"定时数据解析-{sys_session.name}", job_in.cron, sys_user.id, analyze, job_in.sys_session_id)

@@ -80,7 +80,7 @@ def analyze_logger(logger_name: str, path: str):
     # 添加 ContextFilter 到全局 Logger
     a_logger.addFilter(context_filter)
 
-    formatter = RequestFormatter(fmt='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    formatter = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
     # 创建一个 handler 将日志输出到控制台
     console_handler = logging.StreamHandler()
