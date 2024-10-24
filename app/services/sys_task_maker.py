@@ -33,7 +33,8 @@ def task_execute(obj: TaskObj):
     log_dir = os.path.join(settings.sys_dir, settings.log_dir, settings.log_task_dir)
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
-    log_file_name = int(time.time() * 1000)
+    # log_file_name = int(time.time() * 1000)
+    log_file_name = f"{int(time.time() * 1000)}-{obj.name}.log"
     log_file_path = os.path.join(str(log_dir), str(log_file_name))
     logger = analyze_logger(str(log_file_name), log_file_path)
     # 设置上下文 logger

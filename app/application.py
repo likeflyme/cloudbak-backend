@@ -13,12 +13,13 @@ from db.sys_db import engine, Base
 # 加载表模型，确保创建表
 from app.models import sys
 from config.app_config import settings
-from app.sheduler import create_scheduler
+from app.sheduler import load_jobs
 
 from db.wx_db import clear_all as wx_db_clear_all
 from db.sys_db import clear_all as sys_db_clear_all
 from config.log_config import logger
 from contextlib import asynccontextmanager
+from app.sheduler import shutdown as scheduler_shutdown
 
 
 def create_app() -> FastAPI:
@@ -51,20 +52,30 @@ def create_app() -> FastAPI:
     app.add_exception_handler(Exception, global_exception_handler)
 
     # 创建定时任务
-    create_scheduler()
+    load_jobs()
 
     return app
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Launching...")
-    yield
-    logger.info("Shutting down...")
     try:
-        wx_db_clear_all()
-        sys_db_clear_all()
-        logger.info("DB Connections All Closed")
+        logger.info("Launching...")
+        yield
+        logger.info("Shutting down...")
+        try:
+            wx_db_clear_all()
+            sys_db_clear_all()
+            logger.info("DB Connections All Closed")
+        except Exception as e:
+            logger.warning("Close DB Connection Error")
+            logger.error(e)
+        try:
+            logger.info('Shutting down scheduler')
+            scheduler_shutdown()
+            logger.info('Shutting down scheduler success')
+        except Exception as e:
+            logger.warning('scheduler shutdown error')
+            logger.error(e)
     except Exception as e:
-        logger.warning("Close DB Connection Error")
         logger.error(e)

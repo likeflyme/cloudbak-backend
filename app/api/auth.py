@@ -51,7 +51,7 @@ def read_curren_user(db: Session = Depends(get_db),
         session_confs.append(sys_conf)
     configs = []
     for conf in session_confs:
-        configs.append(SysConfigOut(**conf.__dict__))
+        configs.append(conf)
     return {
         "id": user.id,
         "username": user.username,

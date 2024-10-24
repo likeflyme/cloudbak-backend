@@ -1,7 +1,9 @@
 import time
-from typing import Union
+from typing import Union, List
 
 from pydantic import BaseModel
+
+from app.schemas.sys_conf_schemas import SysConfigOut
 
 
 class TokenData(BaseModel):
@@ -37,6 +39,7 @@ class User(BaseModel):
     create_time: Union[int, None] = None
     update_time: Union[int, None] = None
     current_session: Union[UserSession, None] = None
+    configs: List[Union[SysConfigOut, None]] = None
 
 
 class UserInDB(User):

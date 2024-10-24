@@ -56,9 +56,8 @@ def analyze(sys_session_id: int):
         logger.info("头像提取------------------------------------")
         analyze_head_images(sys_session_id)
         logger.info("头像提取完成")
-
+    finally:
         # 修改状态为解析完成
         sys_session.analyze_state = session_analyze_end
         db.commit()
-    finally:
         db.close()
