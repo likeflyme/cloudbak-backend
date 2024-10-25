@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select, and_, union, or_
 from sqlalchemy.orm import Session
 
-from app.dependencies.auth_dep import get_current_sys_session
+from app.dependencies.auth_dep import get_current_sys_session, get_current_user
 from app.helper.directory_helper import get_session_dir, get_decoded_media_path
 from app.helper.filter_helper import convert_type
 from app.models import micro_msg
@@ -16,7 +16,7 @@ from app.models.micro_msg import Contact, ChatRoom, ContactHeadImgUrl
 from app.models.multi import msg
 from app.models.multi.media_msg import Media
 from app.models.proto import cr_extra_buf_pb2
-from app.models.sys import SysSession
+from app.models.sys import SysSession, SysUser
 from app.schemas import schemas
 from app.schemas.micro_msg import ChatRoom as ChatRoomSchema
 from app.schemas.schemas import ChatMsg, ContactHeadImgUrlOut
@@ -470,6 +470,7 @@ def red_contact(db: Session = Depends(wx_db_micro_msg)):
 @router.get("/contact-split", response_model=List[schemas.ContactWithHeadImg])
 def red_contact(page: int = 1,
                 size: int = 20,
+                search: str = None,
                 ChatRoomType: int = 0,
                 db: Session = Depends(wx_db_micro_msg)):
     if ChatRoomType == 0:
@@ -497,6 +498,16 @@ def red_contact(page: int = 1,
             .offset((page - 1) * size)
             .limit(size)
         )
+    if search:
+        stmt = stmt.where(or_(
+            micro_msg.Contact.NickName.like(f"%{search}%"),
+            micro_msg.Contact.Remark.like(f"%{search}%"),
+            micro_msg.Contact.Alias.like(f"%{search}%"),
+            micro_msg.Contact.PYInitial.like(f"%{search}%"),
+            micro_msg.Contact.QuanPin.like(f"%{search}%"),
+            micro_msg.Contact.RemarkPYInitial.like(f"%{search}%"),
+            micro_msg.Contact.RemarkQuanPin.like(f"%{search}%"),
+        ))
 
     results = db.execute(stmt).all()
     return [
@@ -508,6 +519,53 @@ def red_contact(page: int = 1,
         )
         for contact, contact_head_img_url in results
     ]
+
+
+@router.get("/contact-search")
+async def contact_search(search: str,
+                       user: SysUser = Depends(get_current_user),
+                       db: Session = Depends(wx_db_micro_msg)):
+    base_stmt = (
+        select(micro_msg.Contact, micro_msg.ContactHeadImgUrl)
+        .join(micro_msg.ContactHeadImgUrl, micro_msg.Contact.UserName == micro_msg.ContactHeadImgUrl.usrName)
+        .where(or_(
+            micro_msg.Contact.NickName.like(f"%{search}%"),
+            micro_msg.Contact.Remark.like(f"%{search}%"),
+            micro_msg.Contact.Alias.like(f"%{search}%"),
+            micro_msg.Contact.PYInitial.like(f"%{search}%"),
+            micro_msg.Contact.QuanPin.like(f"%{search}%"),
+            micro_msg.Contact.RemarkPYInitial.like(f"%{search}%"),
+            micro_msg.Contact.RemarkQuanPin.like(f"%{search}%"),
+        ))
+    )
+
+    contact_stmt = base_stmt.where(micro_msg.Contact.UserName.notlike("%@chatroom"))
+
+    chatroom_stmt = base_stmt.where(micro_msg.Contact.UserName.like("%@chatroom"))
+
+    contact_result = db.execute(contact_stmt).all()
+    logger.info(f"query: {contact_stmt}")
+    chatroom_result = db.execute(chatroom_stmt).all()
+    return {
+        'contacts': [
+            schemas.ContactWithHeadImg(
+                **contact.__dict__,
+                smallHeadImgUrl=contact_head_img_url.smallHeadImgUrl,
+                bigHeadImgUrl=contact_head_img_url.bigHeadImgUrl,
+                headImgMd5=contact_head_img_url.headImgMd5
+            )
+            for contact, contact_head_img_url in contact_result
+        ],
+        'chatrooms': [
+            schemas.ContactWithHeadImg(
+                **contact.__dict__,
+                smallHeadImgUrl=contact_head_img_url.smallHeadImgUrl,
+                bigHeadImgUrl=contact_head_img_url.bigHeadImgUrl,
+                headImgMd5=contact_head_img_url.headImgMd5
+            )
+            for contact, contact_head_img_url in chatroom_result
+        ]
+    }
 
 
 @router.get("/image")

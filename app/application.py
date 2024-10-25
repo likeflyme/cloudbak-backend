@@ -59,23 +59,45 @@ def create_app() -> FastAPI:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    生命周期函数
+    启动事件放在 yield 之前，关闭事件放在 yield 之后
+    :param app:
+    :return:
+    """
     try:
-        logger.info("Launching...")
+        startup()
         yield
-        logger.info("Shutting down...")
-        try:
-            wx_db_clear_all()
-            sys_db_clear_all()
-            logger.info("DB Connections All Closed")
-        except Exception as e:
-            logger.warning("Close DB Connection Error")
-            logger.error(e)
-        try:
-            logger.info('Shutting down scheduler')
-            scheduler_shutdown()
-            logger.info('Shutting down scheduler success')
-        except Exception as e:
-            logger.warning('scheduler shutdown error')
-            logger.error(e)
+        shutdown()
     except Exception as e:
+        logger.error(e)
+
+
+def startup():
+    """
+    启动事件
+    :return:
+    """
+    logger.info("Start")
+
+
+def shutdown():
+    """
+    关闭事件
+    :return:
+    """
+    try:
+        logger.info("Shutting down...")
+        wx_db_clear_all()
+        sys_db_clear_all()
+        logger.info("DB Connections All Closed")
+    except Exception as e:
+        logger.warning("Close DB Connection Error")
+        logger.error(e)
+    try:
+        logger.info('Shutting down scheduler')
+        scheduler_shutdown()
+        logger.info('Shutting down scheduler success')
+    except Exception as e:
+        logger.warning('scheduler shutdown error')
         logger.error(e)
