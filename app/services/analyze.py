@@ -45,7 +45,7 @@ def analyze(sys_session_id: int):
 
         # 1. decode 数据库
         logger.info("数据库文件解密------------------------------------")
-        decode_msg(sys_session)
+        decode_msg(db, sys_session)
         logger.info("数据库解密完成")
 
         logger.info("开始数据库排序------------------------------------")

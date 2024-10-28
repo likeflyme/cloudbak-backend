@@ -8,7 +8,7 @@ from pathlib import Path
 from Crypto.Cipher import AES
 
 from app.helper.directory_helper import get_wx_dir
-from app.models.sys import SysSession
+from app.models.sys import SysSession, SysDecryptRecord
 from config.log_config import get_context_logger
 
 SQLITE_FILE_HEADER = bytes('SQLite format 3', encoding='ASCII') + bytes(1)
@@ -29,7 +29,7 @@ patterns = [
 compiled_patterns = [re.compile(pattern) for pattern in patterns]
 
 
-def decode_msg(sys_session: SysSession):
+def decode_msg(db, sys_session: SysSession):
     logger = get_context_logger()
     wx_dir = get_wx_dir(sys_session)
     # 2. 数据库解密
@@ -44,9 +44,23 @@ def decode_msg(sys_session: SysSession):
             for pattern in compiled_patterns:
                 if pattern.match(filename):
                     db_file = os.path.join(dirpath, filename)
+                    # 检查文件的修改时间与数据库中的修改时间
+                    modification_time = os.path.getmtime(db_file)
+                    record = db.query(SysDecryptRecord).filter_by(db_file=filename, session_id=sys_session.id).first()
+                    if record is not None and record.file_last_ts == modification_time:
+                        logger.info(f"file {filename} no modify")
+                        continue
                     # 解密，解密的文件为原文件名加 decoded_ 前缀
-                    decode_one(db_file, password)
-                    break
+                    is_success = decode_one(db_file, password)
+                    if is_success:
+                        logger.info("record file modification_time")
+                        if record is None:
+                            record = SysDecryptRecord(db_file=filename, file_last_ts=modification_time, session_id=sys_session.id)
+                            db.add(record)
+                            db.commit()
+                        else:
+                            record.file_last_ts = modification_time
+                            db.commit()
 
 
 def decode_one(input_file, password):
@@ -75,6 +89,7 @@ def decode_one(input_file, password):
         logger.info('decryption success')
     else:
         logger.info('password error')
+        return False
     blist = [
         blist[i:i + DEFAULT_PAGESIZE]
         for i in range(DEFAULT_PAGESIZE, len(blist), DEFAULT_PAGESIZE)
@@ -89,3 +104,4 @@ def decode_one(input_file, password):
             t = AES.new(key, AES.MODE_CBC, i[-48:-32])
             f.write(t.decrypt(i[:-48]))
             f.write(i[-48:])
+    return True

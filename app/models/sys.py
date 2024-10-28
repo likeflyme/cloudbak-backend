@@ -77,3 +77,19 @@ class SysConfig(Base):
     reversed1 = Column(Integer)
     reversed2 = Column(String)
     reversed3 = Column(String)
+
+
+class SysDecryptRecord(Base):
+    __tablename__ = 'sys_decrypt_record'
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    db_file = Column(String)
+    file_last_ts = Column(Integer)
+    session_id = Column(Integer, ForeignKey("sys_session.id"))
+    create_time = Column(Integer, default=time.time())
+    update_time = Column(Integer, default=time.time())
+    reversed0 = Column(Integer)
+    reversed1 = Column(Integer)
+    reversed2 = Column(String)
+    reversed3 = Column(String)
