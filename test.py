@@ -17,6 +17,7 @@ from app.models.micro_msg import Contact, ContactHeadImgUrl, ChatRoom
 from app.models.multi.media_msg import Media
 from app.models.proto import test_pb2, msg_bytes_extra_pb2, cr_extra_buf_pb2
 from app.models.sys import SysUser, SysSession
+from app.services.db_talker import get_talker_id
 from app.services.save_head_images import save_header_images, analyze_head_images
 from config.app_config import settings as app_settings
 from db.sys_db import SessionLocal
@@ -202,32 +203,11 @@ def logger_error_test(num):
         log.error(e)
 
 
-from apscheduler.schedulers.blocking import BlockingScheduler
-scheduler = BlockingScheduler()
-
-
-def tick():
-    print('Tick! The time is: %s' % datetime.now())
-    jobs = scheduler.get_jobs()
-    print(len(jobs))
-    for job in jobs:
-        print(f'Job is ${job.id} - ${job.name}, ${job.args}')
-
-
 if __name__ == '__main__':
 
-    scheduler.add_executor('processpool')
-    scheduler.add_job(tick, 'interval', seconds=3)
-    print('Press Ctrl+{0} to exit'.format('Break' if os.name == 'nt' else 'C'))
-
-    try:
-        scheduler.start()
-    except (KeyboardInterrupt, SystemExit):
-        pass
-    # with SessionLocal() as session:
-    #     sys_session = session.query(SysSession).filter_by(id=8).one()
-    #     session_local = wx_db_msg(15, sys_session)
-    #     if session_local is None:
-    #         logger.info(f"库 {15} 不存在，继续查询下一个库")
+    with SessionLocal() as db:
+        sys_session = db.query(SysSession).filter_by(id=8).one()
+        taker_id = get_talker_id(sys_session, 5, 'z939060176')
+        print(taker_id)
 
 

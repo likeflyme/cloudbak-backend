@@ -7,6 +7,7 @@ from config.log_config import get_context_logger
 from db.sys_db import SessionLocal
 from db.wx_db import clear_wx_db_cache, clear_session_db_cache
 from .db_order import clear_session_msg_sort, get_sorted_db
+from .db_talker import init_talker
 from .decode_wx_pictures import decrypt_images
 from .save_head_images import save_header_images, analyze_head_images
 from ..helper.directory_helper import get_session_dir, get_wx_dir
@@ -51,6 +52,10 @@ def analyze(sys_session_id: int):
         logger.info("开始数据库排序------------------------------------")
         get_sorted_db(sys_session)
         logger.info("数据库排序完成")
+
+        logger.info("缓存用户id------------------------------------")
+        init_talker(sys_session)
+        logger.info("缓存用户id完成")
 
         # 头像提取
         logger.info("头像提取------------------------------------")

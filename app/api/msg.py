@@ -21,6 +21,7 @@ from app.schemas import schemas
 from app.schemas.micro_msg import ChatRoom as ChatRoomSchema
 from app.schemas.schemas import ChatMsg, ContactHeadImgUrlOut
 from app.services import parse_msg
+from app.services.db_talker import get_talker_id
 from app.services.decode_wx_media import decode_media
 from app.services.decode_wx_pictures import decrypt_file
 from config.log_config import logger
@@ -151,9 +152,11 @@ def red_msgs(strUsrName: str,
         current_db_no = num
         logger.info(f"当前库索引 {current_db_no}")
         try:
+            talker_id = get_talker_id(sys_session, db_sequence, strUsrName)
+            logger.info(f"TalkerId: {talker_id}")
             # 再根据id查询消息列表
-            stmt = (select(msg.Msg).where(msg.Msg.StrTalker == strUsrName)
-                    .order_by(msg.Msg.CreateTime.desc(), msg.Msg.Sequence.desc())
+            stmt = (select(msg.Msg).where(msg.Msg.TalkerId == talker_id)
+                    .order_by(msg.Msg.Sequence.desc())
                     .offset((page - 1) * size + start).limit(query_size))
             logger.info(f"query sql: {stmt}")
             msgs = db.execute(stmt).all()
@@ -242,7 +245,9 @@ def red_msgs_filter(strUsrName: str,
         try:
             # 再根据id查询消息列表
             logger.info(f"offset: {(page - 1) * size + start}, limit: {query_size}")
-            stmt = (select(msg.Msg).where(msg.Msg.StrTalker == strUsrName)
+            talker_id = get_talker_id(sys_session, db_sequence, strUsrName)
+            logger.info(f"TalkerId: {talker_id}")
+            stmt = (select(msg.Msg).where(msg.Msg.TalkerId == talker_id)
                     .offset((page - 1) * size + start).limit(query_size))
             tm_stmt = None
             # 添加查询条件
@@ -260,9 +265,9 @@ def red_msgs_filter(strUsrName: str,
                     end_timestamp = int(end_of_day.timestamp())
                     logger.info(f"时间戳: {end_timestamp}")
                     if filterMode == 0 or filterMode == 1:
-                        tm_stmt = stmt.where(msg.Msg.CreateTime <= end_timestamp).order_by(msg.Msg.CreateTime.desc(), msg.Msg.Sequence.desc())
+                        tm_stmt = stmt.where(msg.Msg.CreateTime <= end_timestamp).order_by(msg.Msg.Sequence.desc())
                     else:
-                        tm_stmt = stmt.where(msg.Msg.CreateTime > end_timestamp).order_by(msg.Msg.CreateTime.asc(), msg.Msg.Sequence.asc())
+                        tm_stmt = stmt.where(msg.Msg.CreateTime > end_timestamp).order_by(msg.Msg.Sequence.asc())
                 else:
                     type_list = convert_type(filterType)
                     logger.info(f"query types {type_list}")
@@ -273,7 +278,7 @@ def red_msgs_filter(strUsrName: str,
             if filterText is not None:
                 if filterType == 0:
                     stmt = stmt.where(msg.Msg.StrContent.contains(filterText))
-            stmt = stmt.order_by(msg.Msg.CreateTime.desc(), msg.Msg.Sequence.desc())
+            stmt = stmt.order_by(msg.Msg.Sequence.desc())
             if filterType == 7:
                 logger.info(f"query sql: {tm_stmt}")
                 msgs = db.execute(tm_stmt).all()
@@ -362,15 +367,15 @@ def red_msgs_by_local_id(strUsrName: str,
         try:
             # 再根据id查询消息列表
             logger.info(f"offset: {(page - 1) * size + start}, limit: {query_size}")
-            stmt = (select(msg.Msg).where(msg.Msg.StrTalker == strUsrName)
+            talker_id = get_talker_id(sys_session, db_sequence, strUsrName)
+            logger.info(f"TalkerId: {talker_id}")
+            stmt = (select(msg.Msg).where(msg.Msg.TalkerId == talker_id)
                     .offset((page - 1) * size + start).limit(query_size))
             # 查询模式
             if filterMode >= 0:
-                stmt = stmt.where(msg.Msg.CreateTime <= CreateTime).order_by(msg.Msg.CreateTime.desc(),
-                                                                             msg.Msg.Sequence.desc())
+                stmt = stmt.where(msg.Msg.CreateTime <= CreateTime).order_by(msg.Msg.Sequence.desc())
             else:
-                stmt = stmt.where(msg.Msg.CreateTime > CreateTime).order_by(msg.Msg.CreateTime.asc(),
-                                                                             msg.Msg.Sequence.asc())
+                stmt = stmt.where(msg.Msg.CreateTime > CreateTime).order_by(msg.Msg.Sequence.asc())
             logger.info(f"query sql: {stmt}")
             msgs = db.execute(stmt).all()
             logger.info(f"数据量 {len(msgs)}")

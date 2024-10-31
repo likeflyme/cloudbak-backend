@@ -58,6 +58,10 @@ def update_current_session(sys_session_id: int, user: SysUser = Depends(get_curr
     user.current_session_id = sys_session_id
     sys_session = db.query(SysSession).filter_by(id=sys_session_id).first()
 
+    return session_info(sys_session)
+
+
+def session_info(sys_session: SysSession):
     data_path = get_wx_dir(sys_session)
     db_path = os.path.join(data_path, wx_settings.db_micro_msg)
     logger.info("DB: %s", db_path)
@@ -68,21 +72,22 @@ def update_current_session(sys_session_id: int, user: SysUser = Depends(get_curr
         return data
     # 存在微信库文件则查询微信用户头像信息
     SessionLocal = get_session_local(db_path)
-    micro_db = SessionLocal()
-    try:
+    with SessionLocal() as micro_db:
         head_img = micro_db.query(ContactHeadImgUrl).filter_by(usrName=sys_session.wx_id).first()
         if head_img:
             data.smallHeadImgUrl = head_img.smallHeadImgUrl
             data.bigHeadImgUrl = head_img.bigHeadImgUrl
-    finally:
-        micro_db.close()
     return data
 
 
-@router.get("/sys-sessions", response_model=List[SysSessionOut])
+@router.get("/sys-sessions", response_model=List[SysSessionSchemaWithHeadImg])
 def session_list(user: SysUser = Depends(get_current_user),
                  db: Session = Depends(get_db)):
-    return db.query(SysSession).filter_by(owner_id=user.id).all()
+    sys_sessions = db.query(SysSession).filter_by(owner_id=user.id).all()
+    array = []
+    for sys_session in sys_sessions:
+        array.append(session_info(sys_session))
+    return array
 
 
 @router.post("/sys-session", response_model=SysSessionSchemaWithId)

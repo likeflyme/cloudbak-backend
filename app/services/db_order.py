@@ -41,7 +41,7 @@ def get_sorted_db(sys_session: SysSession):
         wx_session_local = wx_db_msg(num, sys_session)
         wx_db = wx_session_local()
         try:
-            msg = wx_db.query(Msg).order_by(Msg.CreateTime.desc(), Msg.Sequence.desc()).first()
+            msg = wx_db.query(Msg).order_by(Msg.localId.desc()).first()
             if msg:  # 只有查询到消息时才加入排序
                 key_value_array.append({
                     "num": num,
