@@ -44,7 +44,7 @@ class SysSession(Base):
     create_time = Column(Integer, default=lambda: int(time.time()))
     update_time = Column(Integer, default=lambda: int(time.time()))
     owner_id = Column(Integer, ForeignKey("sys_user.id"))
-    analyze_state = Column(Integer, default=session_analyze_pending)
+    analyze_state = Column(Integer, default=session_analyze_end)
 
     owner = relationship("SysUser", back_populates="sessions")
 
