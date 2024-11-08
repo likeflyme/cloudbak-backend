@@ -87,14 +87,7 @@ async def get_current_user(db: Session = Depends(get_db), token: str = Depends(o
 
 
 def get_current_sys_session(db: Session = Depends(get_db), user: SysUser = Depends(get_current_user)):
-    sys_session = db.query(SysSession).filter_by(id=user.current_session_id).first()
-    if sys_session.analyze_state != 0:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="会话正在执行解析任务",
-        )
-    return sys_session
-
+    return db.query(SysSession).filter_by(id=user.current_session_id).first()
 
 
 def get_current_wx_id(sys_session: SysSession = Depends(get_current_sys_session)):
