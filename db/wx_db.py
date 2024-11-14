@@ -89,7 +89,7 @@ def get_session_local(db_path):
 def msg_db_count(sys_session: SysSession) -> int:
     path = os.path.join(get_wx_dir(sys_session), wx_settings.db_multi)
 
-    pattern = re.compile(r'^MSG\d+\.db$')
+    pattern = re.compile(r'^decoded_MSG\d+\.db$')
     # 计数器
     count = 0
 
@@ -102,7 +102,7 @@ def msg_db_count(sys_session: SysSession) -> int:
 
 def media_msg_db_array(sys_session: SysSession) -> list:
     path = os.path.join(get_wx_dir(sys_session), wx_settings.db_multi)
-    pattern = re.compile(r'^MediaMSG\d+\.db$')
+    pattern = re.compile(r'^decoded_MediaMSG\d+\.db$')
     db_array = []
     # 遍历目录中的文件
     for filename in os.listdir(path):
