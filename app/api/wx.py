@@ -93,6 +93,7 @@ def client_decrypt(sys_session_id: int,
     :param db:
     :return:
     """
+    logger.info("客户端提交的时间戳：%d", update_time)
     sys_session = db.query(SysSession).filter_by(id=sys_session_id).first()
     sys_session.update_time = update_time
     db.commit()

@@ -21,6 +21,7 @@ DEFAULT_ITER = 64000
 patterns = [
     r'^MicroMsg.db$',
     r'^Misc.db$',
+    r'^PublicMsg.db$',
     r'^HardLinkImage.db$',
     r'^MediaMSG\d+.db$',
     r'^MSG\d+.db$'

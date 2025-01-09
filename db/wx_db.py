@@ -153,7 +153,7 @@ def wx_db_msg0(curren_session: SysSession = Depends(get_current_sys_session)):
 
 def wx_db_micro_msg(curren_session: SysSession = Depends(get_current_sys_session)):
     """
-    获取 micro_msg.db 数据库 session
+    获取 MicroMsg.db 数据库 session
     :param wxid: 用户当前微信id
     :return: 数据库 session
     """
@@ -174,12 +174,33 @@ def wx_db_micro_msg(curren_session: SysSession = Depends(get_current_sys_session
 
 def wx_db_hard_link_image(curren_session: SysSession = Depends(get_current_sys_session)):
     """
-    获取 micro_msg.db 数据库 session
+    获取 HardLinkImage.db 数据库 session
     :param wxid: 用户当前微信id
     :return: 数据库 session
     """
     db_path = os.path.join(get_wx_dir(curren_session), wx_settings.db_hard_link_image)
     logger.info("DB: %s", db_path)
+    SessionLocal = get_session_local(db_path)
+    my_db = SessionLocal()
+    try:
+        yield my_db
+    finally:
+        my_db.close()
+
+
+def wx_db_public_msg(curren_session: SysSession = Depends(get_current_sys_session)):
+    """
+    获取 PublicMsg.db 数据库 session
+    :param wxid: 用户当前微信id
+    :return: 数据库 session
+    """
+    db_path = os.path.join(get_wx_dir(curren_session), wx_settings.db_public_msg)
+    logger.info("DB: %s", db_path)
+    if not os.path.exists(db_path):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="库文件不存在:" + db_path
+        )
     SessionLocal = get_session_local(db_path)
     my_db = SessionLocal()
     try:

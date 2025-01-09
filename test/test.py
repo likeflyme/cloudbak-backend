@@ -176,4 +176,33 @@ def msg_db_count():
     return count
 
 
-print(msg_db_count())
+xml_data = """
+    <msg>
+    <fromusername>wxid_ktyhsjobmk9k12</fromusername>
+    <scene>0</scene>
+    <appinfo>
+        <version>1</version>
+        <appname/>
+    </appinfo>
+    <commenturl/>
+    <appmsg>
+        <title>温软的风与郭蔚林的聊天记录</title>
+        <des>温软的风:出一些书籍、绘本、科普文学类期刊！需要的加我私聊！！！
+            温软的风:[图片]
+            温软的风:[图片]
+            温软的风:[图片]...
+        </des>
+        <action>view</action>
+        <type>19</type>
+        <url>https://support.weixin.qq.com/cgi-bin/mmsupport-bin/readtemplate?t=page/favorite_record__w_unsupport&
+            from=singlemessage&isappinstalled=0
+        </url>
+    </appmsg>
+</msg>
+"""
+
+
+msg = xmltodict.parse(xml_data)
+
+print(msg)
+# print(msg_db_count())

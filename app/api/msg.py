@@ -15,6 +15,7 @@ from app.models import micro_msg
 from app.models.micro_msg import Contact, ChatRoom, ContactHeadImgUrl
 from app.models.multi import msg
 from app.models.multi.media_msg import Media
+from app.models import public_msg
 from app.models.proto import cr_extra_buf_pb2
 from app.models.sys import SysSession, SysUser
 from app.schemas import schemas
@@ -26,7 +27,8 @@ from app.services.decode_wx_media import decode_media
 from app.services.decode_wx_pictures import decrypt_file
 from config.log_config import logger
 from db.sys_db import get_db
-from db.wx_db import wx_db_micro_msg, wx_db_msg, msg_db_count, wx_db_media_msg, wx_db_media_msg_by_filename
+from db.wx_db import wx_db_micro_msg, wx_db_msg, msg_db_count, wx_db_media_msg, wx_db_media_msg_by_filename, \
+    wx_db_public_msg
 from app.services.db_order import get_sorted_db, reversed_array, media_msg_db_array
 
 session_local_dict = defaultdict(lambda: None)
@@ -72,12 +74,12 @@ def red_sessions(page: int = 1, size: int = 20, db: Session = Depends(wx_db_micr
         .join(micro_msg.ContactHeadImgUrl, micro_msg.Session.strUsrName == micro_msg.ContactHeadImgUrl.usrName,
               isouter=True)
         .join(micro_msg.Contact, micro_msg.Session.strUsrName == micro_msg.Contact.UserName, isouter=True)
-        .where(micro_msg.Session.strUsrName.notlike("gh_%"))
-        .where(micro_msg.Session.strUsrName.notlike("@%"))
-        .where(micro_msg.Session.strUsrName.notlike("%@openim"))
-        .where(micro_msg.Session.strUsrName != "notifymessage")
-        .where(micro_msg.Session.strUsrName != "fmessage")
-        .where(micro_msg.Session.strUsrName != "qqmail")
+        # .where(micro_msg.Session.strUsrName.notlike("gh_%"))
+        # .where(micro_msg.Session.strUsrName.notlike("@%"))
+        # .where(micro_msg.Session.strUsrName.notlike("%@openim"))
+        # .where(micro_msg.Session.strUsrName != "notifymessage")
+        # .where(micro_msg.Session.strUsrName != "fmessage")
+        # .where(micro_msg.Session.strUsrName != "qqmail")
         .order_by(micro_msg.Session.nOrder.desc())
         .offset((page - 1) * size)
         .limit(size)
@@ -398,6 +400,43 @@ def red_msgs_by_local_id(strUsrName: str,
     data = {
         "dbNo": current_db_no,
         "start": start,
+        "msgs": results
+    }
+    return data
+
+
+@router.get("/gh-msgs", response_model=ChatMsg)
+def gh_msgs(strUsrName: str,
+            page: int = 1,
+            size: int = 20,
+            start: Optional[int] = 0,
+            dbNo: Optional[int] = None,
+            public_db: Session = Depends(wx_db_public_msg),
+            sys_session: SysSession = Depends(get_current_sys_session)):
+    """
+    分页查询用户分页消息
+    :param public_db:
+    :param strUsrName: 微信号
+    :param page: 页码
+    :param size: 分页大小
+    :param start: 数据库起始偏移值
+    :param dbNo: 数据库编号
+    :param sys_session: 用户 session
+    :return: 分页数据
+    """
+    logger.info(f'strUsrName: {strUsrName}')
+    stmt = (select(public_msg.Msg).where(public_msg.Msg.StrTalker == strUsrName)
+            .order_by(public_msg.Msg.Sequence.desc())
+            .offset((page - 1) * size + start).limit(size))
+    logger.info(f"query sql: {stmt}")
+    msgs = public_db.execute(stmt).all()
+    results = []
+    for r in msgs:
+        nmsg = parse_msg.parse(r[0], sys_session.id, dbNo)
+        results.append(nmsg)
+    data = {
+        "dbNo": 0,
+        "start": 0,
         "msgs": results
     }
     return data
