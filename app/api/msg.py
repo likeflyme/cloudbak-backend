@@ -1,21 +1,26 @@
 import os
+import base64
+import httpx
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import List, Optional
+from io import BytesIO
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import select, and_, union, or_
 from sqlalchemy.orm import Session
 
 from app.dependencies.auth_dep import get_current_sys_session, get_current_user
+from app.helper.contact_helper import contact_type
 from app.helper.directory_helper import get_session_dir, get_decoded_media_path
 from app.helper.filter_helper import convert_type
 from app.models import micro_msg
 from app.models.micro_msg import Contact, ChatRoom, ContactHeadImgUrl
 from app.models.multi import msg
 from app.models.multi.media_msg import Media
-from app.models import public_msg
+from app.models import public_msg, openim_msg, openim_contact, openim_media
 from app.models.proto import cr_extra_buf_pb2
 from app.models.sys import SysSession, SysUser
 from app.schemas import schemas
@@ -28,8 +33,9 @@ from app.services.decode_wx_pictures import decrypt_file
 from config.log_config import logger
 from db.sys_db import get_db
 from db.wx_db import wx_db_micro_msg, wx_db_msg, msg_db_count, wx_db_media_msg, wx_db_media_msg_by_filename, \
-    wx_db_public_msg
+    wx_db_public_msg, wx_db_openim_msg, wx_db_for_conf
 from app.services.db_order import get_sorted_db, reversed_array, media_msg_db_array
+from config.wx_config import settings as wx_settings
 
 session_local_dict = defaultdict(lambda: None)
 
@@ -107,6 +113,28 @@ def red_msg_by_svr_id(svr_id: int,
     if result:
         return parse_msg.parse(result, sys_session.id, db_no)
     return None
+
+
+@router.get("/msgs-all", response_model=ChatMsg)
+def msgs_all(strUsrName: str,
+             page: int = 1,
+             size: int = 20,
+             start: Optional[int] = 0,
+             dbNo: Optional[int] = None,
+             micro_db: Session = Depends(wx_db_micro_msg),
+             sys_session: SysSession = Depends(get_current_sys_session)):
+    # 判断用户查询消息用户类型
+    # 0-Multi, 正常 Multi 目录的消息
+    # 1-publicMsg, 公众号等公共服务
+    # 2-OpenIMMsg, 企业用户
+    tp = contact_type(strUsrName, sys_session)
+
+    if tp == 1:
+        return gh_msgs(strUsrName, page, size, start, dbNo, sys_session)
+    elif tp == 2:
+        return openim_msgs(strUsrName, page, size, start, dbNo, sys_session)
+    else:
+        return red_msgs(strUsrName, page, size, start, dbNo, micro_db, sys_session)
 
 
 @router.get("/msgs", response_model=ChatMsg)
@@ -405,13 +433,11 @@ def red_msgs_by_local_id(strUsrName: str,
     return data
 
 
-@router.get("/gh-msgs", response_model=ChatMsg)
 def gh_msgs(strUsrName: str,
             page: int = 1,
             size: int = 20,
             start: Optional[int] = 0,
             dbNo: Optional[int] = None,
-            public_db: Session = Depends(wx_db_public_msg),
             sys_session: SysSession = Depends(get_current_sys_session)):
     """
     分页查询用户分页消息
@@ -429,17 +455,66 @@ def gh_msgs(strUsrName: str,
             .order_by(public_msg.Msg.Sequence.desc())
             .offset((page - 1) * size + start).limit(size))
     logger.info(f"query sql: {stmt}")
-    msgs = public_db.execute(stmt).all()
-    results = []
-    for r in msgs:
-        nmsg = parse_msg.parse(r[0], sys_session.id, dbNo)
-        results.append(nmsg)
-    data = {
-        "dbNo": 0,
-        "start": 0,
-        "msgs": results
-    }
-    return data
+    pb_db = wx_db_for_conf(wx_settings.db_public_msg, sys_session)()
+    try:
+        msgs = pb_db.execute(stmt).all()
+        results = []
+        for r in msgs:
+            nmsg = parse_msg.parse(r[0], sys_session.id, dbNo)
+            results.append(nmsg)
+        data = {
+            "dbNo": 0,
+            "start": 0,
+            "msgs": results
+        }
+        return data
+    finally:
+        pb_db.close()
+
+
+def openim_msgs(strUsrName: str,
+            page: int = 1,
+            size: int = 20,
+            start: Optional[int] = 0,
+            dbNo: Optional[int] = None,
+            sys_session: SysSession = Depends(get_current_sys_session)):
+    """
+    分页查询用户分页消息
+    :param openimmsg_db:
+    :param strUsrName: 微信号
+    :param page: 页码
+    :param size: 分页大小
+    :param start: 数据库起始偏移值
+    :param dbNo: 数据库编号
+    :param sys_session: 用户 session
+    :return: 分页数据
+    """
+    logger.info(f'strUsrName: {strUsrName}')
+    stmt = (select(openim_msg.Msg).where(openim_msg.Msg.strTalker == strUsrName)
+            .order_by(openim_msg.Msg.sequence.desc())
+            .offset((page - 1) * size + start).limit(size))
+    logger.info(f"query sql: {stmt}")
+    openimmsg_db = wx_db_for_conf(wx_settings.db_openim_msg, sys_session)()
+    try:
+        msgs = openimmsg_db.execute(stmt).all()
+        results = []
+        for r in msgs:
+            m = r[0]
+            # openim_msg.Msg 转 msg.Msg
+            normal_msg = msg.Msg(localId=m.localId, TalkerId=m.talkerId, MsgSvrID=m.MsgSvrID, Type=m.type,
+                                 IsSender=m.IsSender, CreateTime=m.CreateTime, Sequence=m.sequence, StatusEx=m.StatusEx,
+                                 FlagEx=m.FlagEx, Status=m.Status, StrTalker=m.strTalker, StrContent=m.StrContent,
+                                 BytesExtra=m.BytesExtra, BytesTrans=m.BytesTrans)
+            nmsg = parse_msg.parse(normal_msg, sys_session.id, dbNo)
+            results.append(nmsg)
+        data = {
+            "dbNo": 0,
+            "start": 0,
+            "msgs": results
+        }
+        return data
+    finally:
+        openimmsg_db.close()
 
 
 def parseMsg(msgs, micro_db: Session, sys_session: SysSession, strUsrName: str, dbNo: int):
@@ -645,6 +720,7 @@ async def get_image(img_path: str, session_id: int):
 
 @router.get("/media")
 async def get_media(
+        strUsrName: str,
         MsgSvrID: str,
         session_id: int,
         db_no: int = 0,
@@ -657,13 +733,13 @@ async def get_media(
         logger.info("存在，直接返回该数据")
         return FileResponse(mp3_name)
     else:
-        logger.info("不存在，临时生成")
-        db_array = media_msg_db_array(sys_session)
-        for filename in db_array:
-            session_local = wx_db_media_msg_by_filename(filename, sys_session)
-            media_db = session_local()
+        # 需要判断是否是openim消息
+        ctp = contact_type(strUsrName, sys_session)
+        if ctp == 2:
+            # openim 查询OpenIMContact
+            oc_db = wx_db_for_conf(wx_settings.db_openim_media, sys_session)()
             try:
-                media = media_db.query(Media).filter_by(Reserved0=MsgSvrID).first()
+                media = oc_db.query(openim_media.Media).filter_by(Reserved0=MsgSvrID).first()
                 logger.info(f"{media}")
                 if media and media.Buf:
                     logger.info("查询到 media，准备生成 mp3 文件")
@@ -673,7 +749,25 @@ async def get_media(
                 else:
                     logger.info("库中不存在 media 记录或 media 记录不存在 Buf 值")
             finally:
-                media_db.close()
+                oc_db.close()
+        else:
+            logger.info("不存在，临时生成")
+            db_array = media_msg_db_array(sys_session)
+            for filename in db_array:
+                session_local = wx_db_media_msg_by_filename(filename, sys_session)
+                media_db = session_local()
+                try:
+                    media = media_db.query(Media).filter_by(Reserved0=MsgSvrID).first()
+                    logger.info(f"{media}")
+                    if media and media.Buf:
+                        logger.info("查询到 media，准备生成 mp3 文件")
+                        mp3_name = decode_media(media_folder, MsgSvrID, media.Buf)
+                        logger.info(f"生成成功，{mp3_name}")
+                        return FileResponse(mp3_name)
+                    else:
+                        logger.info("库中不存在 media 记录或 media 记录不存在 Buf 值")
+                finally:
+                    media_db.close()
     logger.info("没有获取到数据，返回 404")
     raise HTTPException(status_code=404, detail="File not found")
 
@@ -809,3 +903,39 @@ async def get_chatroom_info(chat_room_name: str, db: Session = Depends(wx_db_mic
 @router.get("/head-image", response_model=Optional[ContactHeadImgUrlOut])
 async def get_head_image(usrName: str, db: Session = Depends(wx_db_micro_msg)):
     return db.query(ContactHeadImgUrl).filter_by(usrName=usrName).first()
+
+
+@router.get("/image-proxy", response_model=Optional[ContactHeadImgUrlOut])
+async def get_head_image(encoded_url: str, request: Request):
+    """
+        图片代理接口，用于请求 Base64 编码的图片 URL，并将图片数据返回给调用方。
+
+        参数:
+        - encoded_url: Base64 编码的图片 URL。
+        """
+    # 解码 Base64 URL
+    try:
+        decoded_url = base64.b64decode(encoded_url).decode("utf-8")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid Base64 URL")
+
+    # 使用 httpx 请求图片数据
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(decoded_url)
+            response.raise_for_status()
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=400, detail=f"Error fetching the image: {e}")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail="Error from the image server")
+
+    # 确保返回的是图片内容
+    content_type = response.headers.get("Content-Type", "")
+    if not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="The URL does not point to an image")
+
+    # 将图片数据流返回给调用方
+    return StreamingResponse(
+        BytesIO(response.content),
+        media_type=content_type
+    )

@@ -209,3 +209,41 @@ def wx_db_public_msg(curren_session: SysSession = Depends(get_current_sys_sessio
         my_db.close()
 
 
+def wx_db_openim_msg(curren_session: SysSession = Depends(get_current_sys_session)):
+    """
+    获取 OpenIMMsg.db 数据库 session
+    :param wxid: 用户当前微信id
+    :return: 数据库 session
+    """
+    db_path = os.path.join(get_wx_dir(curren_session), wx_settings.db_openim_msg)
+    logger.info("DB: %s", db_path)
+    if not os.path.exists(db_path):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="库文件不存在:" + db_path
+        )
+    SessionLocal = get_session_local(db_path)
+    my_db = SessionLocal()
+    try:
+        yield my_db
+    finally:
+        my_db.close()
+
+
+def wx_db_for_conf(db_url: str, curren_session: SysSession = Depends(get_current_sys_session)):
+    """
+    获取微信数据库 session
+    :param db_url: wx_settings 中的配置地址
+    :curren_session: 用户 session
+    :return: 数据库 session
+    """
+    db_path = os.path.join(get_wx_dir(curren_session), db_url)
+    logger.info("DB: %s", db_path)
+    if not os.path.exists(db_path):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="库文件不存在:" + db_path
+        )
+    return get_session_local(db_path)
+
+

@@ -24,7 +24,11 @@ patterns = [
     r'^PublicMsg.db$',
     r'^HardLinkImage.db$',
     r'^MediaMSG\d+.db$',
-    r'^MSG\d+.db$'
+    r'^MSG\d+.db$',
+    r'^OpenIMContact.db$',
+    r'^OpenIMMedia.db$',
+    r'^OpenIMMsg.db$',
+    r'^OpenIMResource.db$'
 ]
 
 compiled_patterns = [re.compile(pattern) for pattern in patterns]

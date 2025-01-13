@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     db_misc: str = 'Msg/decoded_Misc.db'
     db_hard_link_image: str = 'Msg/decoded_HardLinkImage.db'
     db_public_msg: str = 'Msg/decoded_PublicMsg.db'
+    db_openim_msg: str = 'Msg/decoded_OpenIMMsg.db'
+    db_openim_contact: str = 'Msg/decoded_OpenIMContact.db'
+    db_openim_media: str = 'Msg/decoded_OpenIMMedia.db'
     max_msg: int = 10
     decoded_media_path: str = 'decoded_Media/'
 

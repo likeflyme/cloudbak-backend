@@ -8,7 +8,7 @@ class MsgBase(BaseModel):
     TalkerId: int
     MsgSvrIDStr: Optional[str] = None
     Type: int
-    SubType: int
+    SubType: Optional[int] = None
     IsSender: int
     CreateTime: int
     Sequence: int
