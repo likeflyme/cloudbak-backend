@@ -25,6 +25,10 @@ def get_db():
         my_db.close()
 
 
+def get_sys_db():
+    return SessionLocal()
+
+
 def clear_all():
     session = SessionLocal()
     session.close()  # 关闭会话

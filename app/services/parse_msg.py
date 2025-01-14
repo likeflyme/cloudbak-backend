@@ -48,7 +48,6 @@ def parse(msg: Msg, session_id: int, db_no: int):
                     if os.path.exists(file_path):
                         nmsg.Image = img_path
     if hasattr(msg, 'CompressContent') and msg.CompressContent:
-        logger.info('len of CompressContent is : {}'.format(len(msg.CompressContent)))
         try:
             unzipStr = lb.decompress(msg.CompressContent, uncompressed_size=0x10004)
             xml_data = unzipStr.decode('utf-8')

@@ -17,6 +17,7 @@ from config.wx_config import settings as wx_settings
 from app.models.multi.msg import Msg
 
 msg0_db_path = os.path.join(app_settings.sys_dir, 'sessions\\1\\wxid_b125nd5rc59r12\Msg\\Multi\\decoded_MSG0.db')
+msg7_db_path = 'D:\\workspace\\sessions\\8\\wxid_b125nd5rc59r12\\Msg\\Multi\\decoded_MSG7.db'
 
 
 def create_user():
@@ -36,11 +37,11 @@ def create_user():
 
 
 def decrypt_yinyong():
-    db_path = os.path.join(app_settings.sys_dir, 'wx\\jianghu\\wxid_b125nd5rc59r12\\Msg\\Multi\\decoded_MSG0.db')
+    db_path = 'D:\\workspace\\sessions\\8\\wxid_b125nd5rc59r12\\Msg\\Multi\\decoded_MSG7.db'
     session_local = get_session_local(db_path)
     db = session_local()
     try:
-        msg = db.query(Msg).filter_by(localId=63504).first()
+        msg = db.query(Msg).filter_by(localId=64109).first()
         print(msg)
         if msg:
             unzipStr = lb.decompress(msg.BytesExtra, uncompressed_size=0x10004)
@@ -106,14 +107,14 @@ def generate_proto():
 
 
 def deserialize_img():
-    session_local = get_session_local(msg0_db_path)
+    session_local = get_session_local(msg7_db_path)
     db = session_local()
     try:
-        msg = db.query(Msg).filter_by(localId=53792).first()
+        msg = db.query(Msg).filter_by(localId=64109).first()
         print(msg)
         if msg:
             # print('-----decode protobuf-------')
-            # print(decode_protobuf(msg.BytesExtra))
+            print(decode_protobuf(msg.BytesExtra))
             # print(decode_protobuf(msg.CompressContent))
 
             print('-----lz4 decompress compress content-----')
@@ -135,6 +136,9 @@ def deserialize_img():
                 print(f'{f3.s1}: {f3.s2}')
     finally:
         db.close()
+
+
+deserialize_img()
 
 
 # 清理XML数据函数
@@ -176,33 +180,3 @@ def msg_db_count():
     return count
 
 
-xml_data = """
-    <msg>
-    <fromusername>wxid_ktyhsjobmk9k12</fromusername>
-    <scene>0</scene>
-    <appinfo>
-        <version>1</version>
-        <appname/>
-    </appinfo>
-    <commenturl/>
-    <appmsg>
-        <title>温软的风与郭蔚林的聊天记录</title>
-        <des>温软的风:出一些书籍、绘本、科普文学类期刊！需要的加我私聊！！！
-            温软的风:[图片]
-            温软的风:[图片]
-            温软的风:[图片]...
-        </des>
-        <action>view</action>
-        <type>19</type>
-        <url>https://support.weixin.qq.com/cgi-bin/mmsupport-bin/readtemplate?t=page/favorite_record__w_unsupport&
-            from=singlemessage&isappinstalled=0
-        </url>
-    </appmsg>
-</msg>
-"""
-
-
-msg = xmltodict.parse(xml_data)
-
-print(msg)
-# print(msg_db_count())

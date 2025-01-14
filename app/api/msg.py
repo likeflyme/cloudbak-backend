@@ -1,6 +1,7 @@
 import os
 import base64
 import httpx
+import binascii
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -10,11 +11,11 @@ from io import BytesIO
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import select, and_, union, or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app.dependencies.auth_dep import get_current_sys_session, get_current_user
 from app.helper.contact_helper import contact_type
-from app.helper.directory_helper import get_session_dir, get_decoded_media_path
+from app.helper.directory_helper import get_session_dir, get_decoded_media_path, get_wx_dir
 from app.helper.filter_helper import convert_type
 from app.models import micro_msg
 from app.models.micro_msg import Contact, ChatRoom, ContactHeadImgUrl
@@ -23,15 +24,16 @@ from app.models.multi.media_msg import Media
 from app.models import public_msg, openim_msg, openim_contact, openim_media
 from app.models.proto import cr_extra_buf_pb2
 from app.models.sys import SysSession, SysUser
+from app.models.hard_link_image import HardLinkImageAttribute, HardLinkImageID
 from app.schemas import schemas
 from app.schemas.micro_msg import ChatRoom as ChatRoomSchema
 from app.schemas.schemas import ChatMsg, ContactHeadImgUrlOut
 from app.services import parse_msg
 from app.services.db_talker import get_talker_id
 from app.services.decode_wx_media import decode_media
-from app.services.decode_wx_pictures import decrypt_file
+from app.services.decode_wx_pictures import decrypt_file, decrypt_file_return_io
 from config.log_config import logger
-from db.sys_db import get_db
+from db.sys_db import get_db, get_sys_db
 from db.wx_db import wx_db_micro_msg, wx_db_msg, msg_db_count, wx_db_media_msg, wx_db_media_msg_by_filename, \
     wx_db_public_msg, wx_db_openim_msg, wx_db_for_conf
 from app.services.db_order import get_sorted_db, reversed_array, media_msg_db_array
@@ -81,7 +83,7 @@ def red_sessions(page: int = 1, size: int = 20, db: Session = Depends(wx_db_micr
               isouter=True)
         .join(micro_msg.Contact, micro_msg.Session.strUsrName == micro_msg.Contact.UserName, isouter=True)
         # .where(micro_msg.Session.strUsrName.notlike("gh_%"))
-        # .where(micro_msg.Session.strUsrName.notlike("@%"))
+        .where(micro_msg.Session.strUsrName.notlike("@%"))
         # .where(micro_msg.Session.strUsrName.notlike("%@openim"))
         # .where(micro_msg.Session.strUsrName != "notifymessage")
         # .where(micro_msg.Session.strUsrName != "fmessage")
@@ -939,3 +941,70 @@ async def get_head_image(encoded_url: str, request: Request):
         BytesIO(response.content),
         media_type=content_type
     )
+
+
+@router.get("/image-from-md5")
+async def get_image(md5: str, session_id: int, prev: str = 'Thumb'):
+    """
+    根据 md5 获取图片
+    库 decoded_HardLinkImage.db 表 HardLinkImageAttribute 保存了 md5 对应的目录
+    """
+    HardLinkImageID2 = aliased(HardLinkImageID)
+
+    # 构建查询
+    md5_blob = binascii.unhexlify(md5)
+
+    # 构建查询
+    query = (
+        select(
+            HardLinkImageAttribute.Md5Hash,
+            HardLinkImageAttribute.MD5,
+            HardLinkImageAttribute.FileName,
+            HardLinkImageID.Dir.label("dirName1"),
+            HardLinkImageID2.Dir.label("dirName2"),
+        )
+        .join(HardLinkImageID, HardLinkImageAttribute.DirID1 == HardLinkImageID.DirID)
+        .join(HardLinkImageID2, HardLinkImageAttribute.DirID2 == HardLinkImageID2.DirID)
+        .where(HardLinkImageAttribute.MD5 == md5_blob)
+    )
+
+    sys_db = get_sys_db()
+    try:
+        sys_session = sys_db.query(SysSession).filter_by(id=session_id).one()
+    finally:
+        sys_db.close()
+    image_db = wx_db_for_conf(wx_settings.db_hard_link_image, sys_session)()
+    try:
+        # 执行查询，最多只有一个结果
+        row = image_db.execute(query).first()
+        if row is None:
+            raise HTTPException(status_code=404, detail="File not found")
+        # 处理查询结果
+        print(row)
+        relative_path = f'FileStorage/MsgAttach/{row.dirName1}/{prev}/{row.dirName2}/{row.FileName}'
+        print(relative_path)
+    finally:
+        image_db.close()
+
+    wx_dir = get_wx_dir(sys_session)
+
+    file_path = os.path.join(wx_dir, relative_path)
+    logger.info(file_path)
+
+    # 确保 file_path 是 wx_dir 的子路径
+    abs_file_path = os.path.abspath(file_path)
+    abs_base_dir = os.path.abspath(wx_dir)
+
+    if not abs_file_path.startswith(abs_base_dir):
+        raise HTTPException(status_code=403, detail="Invalid path")
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    # 调用解密函数
+    decrypted_stream = decrypt_file_return_io(file_path)
+
+    if decrypted_stream is None:
+        raise HTTPException(status_code=400, detail="Failed to decrypt the file")
+
+    # 返回解密后的字节流数据
+    return StreamingResponse(decrypted_stream, media_type="image/jpeg")

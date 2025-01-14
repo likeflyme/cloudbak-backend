@@ -12,7 +12,7 @@ class HardLinkImageID(Base):
 
 class HardLinkImageAttribute(Base):
     __tablename__ = 'HardLinkImageAttribute'
-    Md5Hash = Column(Integer)
+    Md5Hash = Column(BLOB)
     DirID1 = Column(Integer, ForeignKey('HardLinkImageID.DirID'))
     DirID2 = Column(Integer, ForeignKey('HardLinkImageID.DirID'))
     MD5 = Column(BLOB)

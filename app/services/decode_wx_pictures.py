@@ -9,6 +9,7 @@
 # print(bytes.fromhex('EEEE'))
 # 图片格式的前两个字节固定特征码
 import os
+import io
 
 from app.helper.directory_helper import get_wx_dir
 from app.models.sys import SysSession
@@ -126,3 +127,41 @@ def decrypt_by_file_type(encrypted_file_path: str, image_type: str):
     return decrypted_file_path
 
 
+def decrypt_file_return_io(encrypted_file_path):
+    """
+    解密返回字节流，供接口直接返回
+    """
+    logger.info('decrypt file: %s', encrypted_file_path)
+
+    # 读取文件的前两个字节
+    with open(encrypted_file_path, "rb") as f:
+        first_byte = f.read(1)
+        second_byte = f.read(1)
+
+        if len(first_byte) < 1 or len(second_byte) < 1:
+            logger.warn("File is too small to contain two bytes for matching.")
+            return None
+
+        a1 = first_byte[0]
+        a2 = second_byte[0]
+
+    # 使用前两个字节进行匹配
+    result = match_bytes(a1, a2)
+
+    if result is None:
+        logger.warn("No matching key found for the given bytes.")
+        return None
+
+    key, image_type = result
+
+    # 使用 key 对整个文件进行异或运算，并将解密数据写入字节流
+    decrypted_stream = io.BytesIO()
+    with open(encrypted_file_path, "rb") as encrypted_file:
+        while byte := encrypted_file.read(1):
+            decrypted_stream.write(bytes([byte[0] ^ key]))
+
+    # 重置流的位置为文件开头，供 StreamingResponse 使用
+    decrypted_stream.seek(0)
+
+    logger.debug('Decrypted file data prepared.')
+    return decrypted_stream  # 返回字节流数据

@@ -73,6 +73,14 @@ def get_session_local(db_path):
     :return: SessionLocal
     """
     if session_local_dict[db_path] is None:
+        engine = get_engin(db_path)
+        session_local_dict[db_path] = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    return session_local_dict[db_path]
+
+
+def get_engin(db_path):
+    engine = engine_dict[db_path]
+    if engine is None:
         engine = create_engine(
             f"sqlite:///{db_path}",
             connect_args={"check_same_thread": False},
@@ -82,8 +90,7 @@ def get_session_local(db_path):
             pool_recycle=3600
         )
         engine_dict[db_path] = engine
-        session_local_dict[db_path] = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    return session_local_dict[db_path]
+    return engine
 
 
 def msg_db_count(sys_session: SysSession) -> int:
@@ -247,3 +254,12 @@ def wx_db_for_conf(db_url: str, curren_session: SysSession = Depends(get_current
     return get_session_local(db_path)
 
 
+def wx_db_engin_for_conf(db_url: str, curren_session: SysSession = Depends(get_current_sys_session)):
+    db_path = os.path.join(get_wx_dir(curren_session), db_url)
+    logger.info("DB: %s", db_path)
+    if not os.path.exists(db_path):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="库文件不存在:" + db_path
+        )
+    return get_engin(db_path)
