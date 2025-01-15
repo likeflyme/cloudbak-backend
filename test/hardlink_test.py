@@ -28,7 +28,7 @@ conn = sqlite3.connect(hardlink_image_path)
 c = conn.cursor()
 print("数据库打开成功")
 
-md5 = 'f73415678937715f9ebc988768879089'
+md5 = '97b3f38e0a03e078e8860d7c00e941e7'
 md5_blob = binascii.unhexlify(md5)
 
 cursor = c.execute("""
