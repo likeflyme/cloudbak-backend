@@ -39,7 +39,7 @@ class User(BaseModel):
     create_time: Union[int, None] = None
     update_time: Union[int, None] = None
     current_session: Union[UserSession, None] = None
-    configs: List[Union[SysConfigOut, None]] = None
+    configs: List[SysConfigOut] = None
 
 
 class UserInDB(User):
